@@ -1,0 +1,40 @@
+{
+    "name": "minimal-LLM",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT",
+    "author": "HABIBUR RAHMAN",
+    "scripts": {
+        "start": "node /build/app/server.ts",
+        "dev": "ts-node-dev --respawn --transpile-only ./src/app/server.ts",
+        "build": "tsc",
+        "lint": "eslint src/**/*.ts",
+        "lint:fix": "eslint src/**/*.ts --fix",
+        "prettier": "prettier . --write",
+        "prepare": "husky || true"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
+        "http-status": "^2.1.0",
+        "mongoose": "^8.9.5",
+        "morgan": "^1.10.0",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.6.1",
+        "@commitlint/config-conventional": "^19.6.0",
+        "@eslint/js": "^9.19.0",
+        "@types/cors": "^2.8.17",
+        "@types/eslint__js": "^8.42.3",
+        "@types/express": "^5.0.0",
+        "@types/morgan": "^1.9.9",
+        "eslint": "^9.19.0",
+        "husky": "^9.1.7",
+        "prettier": "3.4.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.21.0"
+    }
+}
