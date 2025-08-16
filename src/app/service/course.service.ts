@@ -3,7 +3,20 @@ import slugify from 'slugify'
 import httpStatus from 'http-status'
 import Course from '../model/course.model'
 import ApiError from '../helpers/ApiError'
-const addCourse = async (payload: Partial<ICourse>) => {
+
+type uploadedFileType =
+    | {
+          filename: string
+          extension: string
+          size: number
+          url: string
+      }
+    | undefined
+
+const addCourse = async (file: uploadedFileType, payload: Partial<ICourse>) => {
+    if (!file) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'image is required')
+    }
     const slug = slugify(payload.title!, { lower: true })
     const course = await Course.findOne({
         $or: [{ title: payload.title }, { slug }],
@@ -15,7 +28,12 @@ const addCourse = async (payload: Partial<ICourse>) => {
         )
     }
 
-    const courseData: Partial<ICourse> = { ...payload, slug }
+    const courseData: Partial<ICourse> = {
+        ...payload,
+        slug,
+        thumbnail: file.url,
+        availableSeat: payload.totalSeat,
+    }
     await Course.create(courseData)
     return { message: 'course created successfully' }
 }
@@ -28,7 +46,11 @@ const getCourseBySlugAndId = async (identifier: string) => {
         $or: [{ slug: identifier }, { id: identifier }],
     }).populate('module')
 }
-const updateCourse = async (identifier: string, payload: Partial<ICourse>) => {
+const updateCourse = async (
+    identifier: string,
+    payload: Partial<ICourse>,
+    file: uploadedFileType
+) => {
     const course = await Course.findOne({
         $or: [{ id: identifier }, { slug: identifier }],
     })
@@ -37,8 +59,9 @@ const updateCourse = async (identifier: string, payload: Partial<ICourse>) => {
     }
     delete payload.id
     delete payload.slug
-
-    //implement image upload
+    if (file) {
+        payload.thumbnail = file.url
+    }
     await Course.findOneAndUpdate(
         {
             $or: [{ id: identifier }, { slug: identifier }],

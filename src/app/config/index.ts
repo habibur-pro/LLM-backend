@@ -12,6 +12,9 @@ const config = {
     mailer_pass: process.env.MAILER_PASS as string,
     access_token_expires_in: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
     refresh_token_expires_in: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d',
+    cloudinary_cloud: process.env.CLOUDINARY_CLOUD,
+    cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
+    cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
 }
 
 export default config

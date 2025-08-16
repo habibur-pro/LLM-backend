@@ -44,5 +44,5 @@ UserSchema.pre<IUser>('validate', async function (next) {
     }
     next()
 })
-const User = model<IUser>('skill', UserSchema)
+const User = model<IUser>('user', UserSchema)
 export default User

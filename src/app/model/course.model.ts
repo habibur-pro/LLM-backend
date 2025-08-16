@@ -49,7 +49,7 @@ const CourseSchema = new Schema<ICourse>(
         },
         isPublished: {
             type: Boolean,
-            default: false,
+            default: true,
         },
     },
     { timestamps: true }
