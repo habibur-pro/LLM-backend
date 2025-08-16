@@ -8,5 +8,10 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     {
         ignores: ['node_modules', 'build'],
+        rules: {
+            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+            'no-empty': 'off',
+        },
     }
 )

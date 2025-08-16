@@ -2,7 +2,7 @@ import { ErrorRequestHandler, NextFunction, Request, Response } from 'express'
 import { ZodError } from 'zod'
 
 import handleZodError from './handleZodError'
-import ApiError from './ApiErrot'
+import ApiError from './ApiError'
 import { IGenericErrorMessages } from './helper.interface'
 import config from '../config'
 

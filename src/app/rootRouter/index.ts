@@ -1,11 +1,11 @@
 import { Router } from 'express'
-import skillRoutes from '../route/skill.router'
+import AuthRouter from '../route/auth.router'
 
 const router = Router()
 const routes = [
     {
-        path: '/skills',
-        route: skillRoutes,
+        path: '/auth',
+        route: AuthRouter,
     },
 ]
 
