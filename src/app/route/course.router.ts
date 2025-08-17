@@ -10,7 +10,7 @@ router.get('/', CourseController.getAllCourse)
 router.get('/:slugOrId/modules', CourseController.getModuleOfCourse)
 router.post(
     '/:slugOrId/modules',
-    authorize(UserRole.Admin),
+    // authorize(UserRole.Admin),
     CourseController.addCourseModule
 )
 router.get('/:slugOrId', CourseController.getCourseBySlugAndId)
@@ -22,7 +22,7 @@ router.patch(
 )
 router.post(
     '/',
-    authorize(UserRole.Admin),
+    // authorize(UserRole.Admin),
     cloudinaryUploader('thumbnail'),
     CourseController.addCourse
 )

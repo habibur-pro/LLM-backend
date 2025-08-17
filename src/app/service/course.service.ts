@@ -5,6 +5,8 @@ import Course from '../model/course.model'
 import ApiError from '../helpers/ApiError'
 import Module from '../model/module.model'
 import { IModule } from '../interface/module.interface'
+import mongoose from 'mongoose'
+import { getErrorMessage } from '../helpers/getErrorMessage'
 
 type uploadedFileType =
     | {
@@ -41,7 +43,7 @@ const addCourse = async (file: uploadedFileType, payload: Partial<ICourse>) => {
 }
 
 const getAllCourse = async () => {
-    return await Course.find().populate('module')
+    return await Course.find().populate('modules')
 }
 const getCourseBySlugAndId = async (identifier: string) => {
     return await Course.find({
@@ -90,18 +92,38 @@ const getModuleOfCourse = async (identifier: string) => {
 }
 
 const addModule = async (identifier: string, payload: Partial<IModule>) => {
-    const course = await Course.findOne({
-        $or: [{ id: identifier }, { slug: identifier }],
-    })
-    if (!course) {
-        throw new ApiError(httpStatus.NOT_FOUND, 'course not found')
+    const session = await mongoose.startSession()
+    session.startTransaction()
+    try {
+        const course = await Course.findOne({
+            $or: [{ id: identifier }, { slug: identifier }],
+        }).session(session)
+        if (!course) {
+            throw new ApiError(httpStatus.NOT_FOUND, 'course not found')
+        }
+        const newModule = await Module.create(
+            [
+                {
+                    courseId: course.id,
+                    title: payload.title,
+                    isFree: payload?.isFree || false,
+                },
+            ],
+            { session }
+        )
+        await Course.findOneAndUpdate(
+            { id: course?.id },
+            { $push: { modules: newModule[0]._id } },
+            { new: true, session }
+        )
+        await session.commitTransaction()
+        return { message: 'module created' }
+    } catch (error) {
+        await session.abortTransaction()
+        throw new ApiError(httpStatus.BAD_REQUEST, getErrorMessage(error))
+    } finally {
+        await session.endSession()
     }
-    await Module.create({
-        courseId: course.id,
-        title: payload.title,
-        isFree: payload?.isFree || false,
-    })
-    return { message: 'module created' }
 }
 
 const CourseService = {

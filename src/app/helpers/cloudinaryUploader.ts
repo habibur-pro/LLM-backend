@@ -49,6 +49,7 @@ export const cloudinaryUploader = (
 
             try {
                 const file = req.file
+                console.log('file', file)
                 if (!file) {
                     req.uploadedFile = undefined
                     return next()
