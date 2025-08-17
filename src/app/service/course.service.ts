@@ -3,6 +3,8 @@ import slugify from 'slugify'
 import httpStatus from 'http-status'
 import Course from '../model/course.model'
 import ApiError from '../helpers/ApiError'
+import Module from '../model/module.model'
+import { IModule } from '../interface/module.interface'
 
 type uploadedFileType =
     | {
@@ -74,10 +76,40 @@ const updateCourse = async (
     return { message: 'updated' }
 }
 
+const getModuleOfCourse = async (identifier: string) => {
+    const course = await Course.findOne({
+        $or: [{ id: identifier }, { slug: identifier }],
+    })
+    if (!course) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'course not found')
+    }
+    const modules = await Module.find({ courseId: course.id }).populate(
+        'lectures'
+    )
+    return modules
+}
+
+const addModule = async (identifier: string, payload: Partial<IModule>) => {
+    const course = await Course.findOne({
+        $or: [{ id: identifier }, { slug: identifier }],
+    })
+    if (!course) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'course not found')
+    }
+    await Module.create({
+        courseId: course.id,
+        title: payload.title,
+        isFree: payload?.isFree || false,
+    })
+    return { message: 'module created' }
+}
+
 const CourseService = {
     addCourse,
     getAllCourse,
     updateCourse,
     getCourseBySlugAndId,
+    getModuleOfCourse,
+    addModule,
 }
 export default CourseService

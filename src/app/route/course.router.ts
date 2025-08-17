@@ -5,6 +5,8 @@ import { cloudinaryUploader } from '../helpers/cloudinaryUploader'
 
 const router = Router()
 router.get('/', CourseController.getAllCourse)
+router.get('/:slugOrId/modules', CourseController.getModuleOfCourse)
+router.post('/:slugOrId/modules', CourseController.addCourseModule)
 router.get('/:slugOrId', CourseController.getCourseBySlugAndId)
 router.patch(
     '/:slugOrId',

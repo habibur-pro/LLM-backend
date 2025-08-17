@@ -46,11 +46,33 @@ const getAllCourse = catchAsync(async (req, res) => {
         data: result,
     })
 })
+const getModuleOfCourse = catchAsync(async (req, res) => {
+    const identifier = req.params.slugOrId
+    const result = await CourseService.getModuleOfCourse(identifier)
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'courses fetched successfully',
+        data: result,
+    })
+})
+const addCourseModule = catchAsync(async (req, res) => {
+    const identifier = req.params.slugOrId
+    const result = await CourseService.addModule(identifier, req.body)
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'module added successfully',
+        data: result,
+    })
+})
 
 const CourseController = {
     addCourse,
     getCourseBySlugAndId,
     updateCourse,
     getAllCourse,
+    getModuleOfCourse,
+    addCourseModule,
 }
 export default CourseController
