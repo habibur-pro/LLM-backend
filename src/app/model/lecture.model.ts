@@ -20,9 +20,9 @@ const LectureSchema = new Schema<ILecture>(
             required: [true, 'moduleId is required'],
         },
 
-        content:{
-            type:String,
-            required:[true, 'content is required']
+        content: {
+            type: String,
+            required: [true, 'content is required'],
         },
         contentType: {
             type: String,
