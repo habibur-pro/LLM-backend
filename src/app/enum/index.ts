@@ -8,3 +8,17 @@ export enum LectureContentType {
     Pdf = 'pdf',
     Text = 'text',
 }
+
+export enum OrderStatus {
+    COMPLETE = 'complete',
+    PENDING = 'pending',
+    PROCESSING = 'processing',
+    CANCELED = 'canceled',
+}
+
+export enum PaymentStatus {
+    COMPLETE = 'complete',
+    PENDING = 'pending',
+    CANCELED = 'canceled',
+    FAILED = 'failed',
+}
