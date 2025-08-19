@@ -22,3 +22,10 @@ export enum PaymentStatus {
     CANCELED = 'canceled',
     FAILED = 'failed',
 }
+
+export enum CourseStatus {
+    UPCOMING = 'upcoming',
+    DRAFTED = 'drafted',
+    PUBLISHED = 'published',
+    UNPUBLISHED = 'unPublished',
+}

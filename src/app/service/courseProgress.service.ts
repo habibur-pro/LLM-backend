@@ -17,21 +17,11 @@ const startCourse = async (payload: { userId: string; courseId: string }) => {
             throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
         }
 
-        await UserCourseProgress.create(
-
-        )
-        
+        await UserCourseProgress.create()
     } catch (error) {}
 }
 
+const getMyCourse = async () => {}
 
-const getMyCourse = async()=>{
-  
-}
-
-
-
-
-
-const CourseProgressService = {startCourse}
+const CourseProgressService = { startCourse }
 export default CourseProgressService

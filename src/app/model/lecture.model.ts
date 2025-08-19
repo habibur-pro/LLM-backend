@@ -14,10 +14,10 @@ const LectureSchema = new Schema<ILecture>(
             type: String,
             required: [true, 'title is required'],
         },
-        moduleId: {
-            type: String,
-            required: [true, 'moduleId is required'],
-        },
+        // moduleId: {
+        //     type: String,
+        //     required: [true, 'moduleId is required'],
+        // },
         content: {
             type: String,
             required: [true, 'content is required'],

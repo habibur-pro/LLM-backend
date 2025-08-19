@@ -17,13 +17,13 @@ router.get('/:slugOrId', CourseController.getCourseBySlugAndId)
 router.patch(
     '/:slugOrId',
     authorize(UserRole.Admin),
-    cloudinaryUploader('thumbnail'),
+    cloudinaryUploader(['thumbnail']),
     CourseController.updateCourse
 )
 router.post(
     '/',
     // authorize(UserRole.Admin),
-    cloudinaryUploader('thumbnail'),
+    cloudinaryUploader(['thumbnail', 'coverPhoto']),
     CourseController.addCourse
 )
 const CourseRouter = router
