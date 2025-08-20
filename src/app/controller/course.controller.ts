@@ -24,12 +24,7 @@ const getCourseBySlugAndId = catchAsync(async (req, res) => {
     })
 })
 const updateCourse = catchAsync(async (req, res) => {
-    const identifier = req.params.slugOrId
-    const result = await CourseService.updateCourse(
-        identifier,
-        req.body,
-        req.uploadedFile
-    )
+    const result = await CourseService.updateCourse(req)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,

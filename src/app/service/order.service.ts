@@ -14,7 +14,7 @@ import { getErrorMessage } from '../helpers/getErrorMessage'
 import Payment from '../model/payment.model'
 const placeOrder = async (req: Request) => {
     const payload: { userId: string; courseId: string } = req.body
-
+    console.log('payload', payload)
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
@@ -49,8 +49,13 @@ const placeOrder = async (req: Request) => {
             transactionId: tranId,
             gateway: 'SSL',
         }
-        await Payment.create([paymentData], { session })
+        const newPayment = await Payment.create([paymentData], { session })
         // payment start
+        await Order.findOneAndUpdate(
+            { id: newOrder[0].id },
+            { payment: newPayment[0]._id },
+            { new: true, session }
+        )
         const store_id = config.ssl_store_id as string
         const store_passwd = config.ssl_store_pass as string
         const is_live = config.is_payment_live === 'true' ? true : false

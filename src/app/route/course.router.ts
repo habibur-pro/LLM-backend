@@ -17,7 +17,7 @@ router.get('/:slugOrId', CourseController.getCourseBySlugAndId)
 router.patch(
     '/:slugOrId',
     authorize(UserRole.Admin),
-    cloudinaryUploader(['thumbnail']),
+    cloudinaryUploader(['thumbnail', 'coverPhoto']),
     CourseController.updateCourse
 )
 router.post(

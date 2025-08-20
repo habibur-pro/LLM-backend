@@ -83,10 +83,10 @@ const signin = async (payload: { email: string; password: string }) => {
         (config.refresh_token_expires_in as any) || '7d'
     )
     const responseData = {
+        id: user.id,
         name: user.name,
         accessToken,
         refreshToken,
-        userId: user.id,
         email: user.email,
         role: user.role,
         accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,

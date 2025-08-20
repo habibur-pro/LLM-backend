@@ -85,6 +85,14 @@ const getAllCourse = async () => {
     return await Course.find().populate('modules')
 }
 const getCourseBySlugAndId = async (identifier: string) => {
+    const course = await Course.findOne({
+        $or: [{ slug: identifier }, { id: identifier }],
+    })
+
+    if (!course) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
+    }
+
     return await Course.findOne({
         $or: [{ slug: identifier }, { id: identifier }],
     }).populate({
@@ -95,11 +103,11 @@ const getCourseBySlugAndId = async (identifier: string) => {
         },
     })
 }
-const updateCourse = async (
-    identifier: string,
-    payload: Partial<ICourse>,
-    file: uploadedFileType
-) => {
+const updateCourse = async (req: Request) => {
+    const identifier = req.params.slugOrId
+
+    const payload: Partial<ICourse> = req.body
+    const { coverPhoto, thumbnail } = req?.uploadedFiles || {}
     const course = await Course.findOne({
         $or: [{ id: identifier }, { slug: identifier }],
     })
@@ -108,8 +116,11 @@ const updateCourse = async (
     }
     delete payload.id
     delete payload.slug
-    if (file) {
-        payload.thumbnail = file.url
+    if (coverPhoto) {
+        payload.coverPhoto = coverPhoto?.url || course.coverPhoto
+    }
+    if (thumbnail) {
+        payload.thumbnail = thumbnail?.url || course.thumbnail
     }
     await Course.findOneAndUpdate(
         {

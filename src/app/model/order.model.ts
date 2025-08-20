@@ -12,7 +12,7 @@ const OrderSchema = new Schema<IOrder>(
             enum: Object.values(OrderStatus),
             default: OrderStatus.PENDING,
         },
-        payment: { type: Schema.Types.ObjectId, ref: 'payment' },
+        payment: { type: Schema.Types.ObjectId, ref: 'payment', default: null },
         user: { type: Schema.Types.ObjectId, ref: 'user' },
         course: { type: Schema.Types.ObjectId, ref: 'course' },
     },
