@@ -1,6 +1,7 @@
 export enum UserRole {
     Student = 'student',
     Admin = 'admin',
+    instructor = 'instructor',
 }
 
 export enum LectureContentType {

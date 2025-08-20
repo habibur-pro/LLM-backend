@@ -85,9 +85,15 @@ const getAllCourse = async () => {
     return await Course.find().populate('modules')
 }
 const getCourseBySlugAndId = async (identifier: string) => {
-    return await Course.find({
+    return await Course.findOne({
         $or: [{ slug: identifier }, { id: identifier }],
-    }).populate('module')
+    }).populate({
+        path: 'modules',
+        populate: {
+            path: 'lectures',
+            model: 'lecture',
+        },
+    })
 }
 const updateCourse = async (
     identifier: string,

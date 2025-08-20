@@ -8,6 +8,7 @@ import { UserRole } from '../enum'
 import WatchHistoryRouter from '../route/watchHistory.router'
 import OrderRouter from '../route/order.router'
 import PaymentRouter from '../route/payment.router'
+import UserRouter from '../route/user.router'
 type AppRoute = {
     path: string
     route: Router
@@ -18,6 +19,10 @@ const routes: AppRoute[] = [
     {
         path: '/auth',
         route: AuthRouter,
+    },
+    {
+        path: '/users',
+        route: UserRouter,
     },
     {
         path: '/courses',

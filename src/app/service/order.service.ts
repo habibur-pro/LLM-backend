@@ -13,17 +13,19 @@ import config from '../config'
 import { getErrorMessage } from '../helpers/getErrorMessage'
 import Payment from '../model/payment.model'
 const placeOrder = async (req: Request) => {
-    const payload: Partial<IOrder> = req.body
+    const payload: { userId: string; courseId: string } = req.body
 
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
-        const user = await User.findById(payload.user).session(session)
+        const user = await User.findOne({ id: payload.userId }).session(session)
         if (!user) {
             throw new ApiError(httpStatus.BAD_REQUEST, 'user not found')
         }
 
-        const course = await Course.findById(payload.course).session(session)
+        const course = await Course.findOne({ id: payload.courseId }).session(
+            session
+        )
         if (!course) {
             throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
         }
@@ -98,6 +100,8 @@ const placeOrder = async (req: Request) => {
         await session.endSession()
     }
 }
-
-const OrderService = { placeOrder }
+const getAllOrder = async () => {
+    return await Order.find().populate(['user', 'course', 'payment'])
+}
+const OrderService = { placeOrder, getAllOrder }
 export default OrderService

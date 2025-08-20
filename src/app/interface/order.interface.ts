@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import { OrderStatus } from '../../enum'
+import { OrderStatus } from '../enum'
 
 export interface IOrder {
     id: string
