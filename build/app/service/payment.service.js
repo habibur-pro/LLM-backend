@@ -20,6 +20,8 @@ const ApiError_1 = __importDefault(require("../helpers/ApiError"));
 const order_model_1 = __importDefault(require("../model/order.model"));
 const course_model_1 = __importDefault(require("../model/course.model"));
 const config_1 = __importDefault(require("../config"));
+const myClass_model_1 = __importDefault(require("../model/myClass.model"));
+const module_model_1 = __importDefault(require("../model/module.model"));
 const successPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const session = yield mongoose_1.default.startSession();
     session.startTransaction();
@@ -35,8 +37,18 @@ const successPayment = (req, res) => __awaiter(void 0, void 0, void 0, function*
             status: enum_1.OrderStatus.COMPLETE,
         }, { new: true, session });
         // update course seat
-        yield course_model_1.default.findByIdAndUpdate(updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.course, {
+        const updatedCourse = yield course_model_1.default.findByIdAndUpdate(updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.course, {
             $inc: { availableSeat: -1 },
+        });
+        // first module of this corse
+        const firstModule = yield module_model_1.default.findById(updatedCourse === null || updatedCourse === void 0 ? void 0 : updatedCourse.modules[0]);
+        // create my classes for getting course progress and watch lecture
+        yield myClass_model_1.default.create({
+            user: updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.user,
+            course: updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.course,
+            overallProgress: 0,
+            prevLecture: firstModule === null || firstModule === void 0 ? void 0 : firstModule.lectures[0],
+            currentLecture: firstModule === null || firstModule === void 0 ? void 0 : firstModule.lectures[0],
         });
         const url = `${config_1.default.frontend_url}/order/success`;
         yield session.commitTransaction();

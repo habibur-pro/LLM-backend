@@ -14,6 +14,7 @@ const watchHistory_router_1 = __importDefault(require("../route/watchHistory.rou
 const order_router_1 = __importDefault(require("../route/order.router"));
 const payment_router_1 = __importDefault(require("../route/payment.router"));
 const user_router_1 = __importDefault(require("../route/user.router"));
+const myCourse_router_1 = __importDefault(require("../route/myCourse.router"));
 const router = (0, express_1.Router)();
 const routes = [
     {
@@ -49,6 +50,11 @@ const routes = [
     {
         path: '/payments',
         route: payment_router_1.default,
+    },
+    {
+        path: '/my-classes',
+        route: myCourse_router_1.default,
+        middleware: [(0, authorize_1.authorize)(enum_1.UserRole.Student, enum_1.UserRole.Admin)],
     },
 ];
 // Apply

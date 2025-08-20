@@ -1,9 +1,10 @@
-import { Schema, model, Document, Types } from 'mongoose'
+import { Schema, model, Document, Types, Model } from 'mongoose'
 import {
-    IModuleProgress,
-    IUserCourseProgress,
+    ICompletedModules,
+    IMyClass,
     IWatchedLecture,
-} from '../interface/courseProgress.interface'
+} from '../interface/myClass.interface'
+import idGenerator from '../helpers/idGenerator'
 
 // interface IWatchedLecture {
 //     lectureId: string // FK → Lecture.id
@@ -34,7 +35,7 @@ const WatchedLectureSchema = new Schema<IWatchedLecture>({
     watchedAt: { type: Date, default: Date.now },
 })
 
-const ModuleProgressSchema = new Schema<IModuleProgress>({
+const ModuleProgressSchema = new Schema<ICompletedModules>({
     module: {
         type: Schema.Types.ObjectId,
         required: [true, 'module is required'],
@@ -44,8 +45,13 @@ const ModuleProgressSchema = new Schema<IModuleProgress>({
     completedAt: { type: Date, default: null },
 })
 
-const UserCourseProgressSchema = new Schema<IUserCourseProgress>(
+const MyClassSchema = new Schema<IMyClass>(
     {
+        id: {
+            type: String,
+            unique: true,
+            required: [true, 'id is required'],
+        },
         user: {
             type: Schema.Types.ObjectId,
             required: [true, 'userId is required'],
@@ -53,18 +59,34 @@ const UserCourseProgressSchema = new Schema<IUserCourseProgress>(
         course: {
             type: Schema.Types.ObjectId,
             required: [true, 'course is required'],
+            ref: 'course',
         },
-        modules: { type: [ModuleProgressSchema], default: [] },
+        completedModules: { type: [ModuleProgressSchema], default: [] },
         overallProgress: { type: Number, default: 0 },
+        prevLecture: {
+            type: Schema.Types.ObjectId,
+            require: [true, 'current lecture is required'],
+            ref: 'lecture',
+        },
+        currentLecture: {
+            type: Schema.Types.ObjectId,
+            require: [true, 'current lecture is required'],
+            ref: 'lecture',
+        },
+
         isCompleted: { type: Boolean, default: false },
         completedAt: { type: Date, default: null },
     },
     { timestamps: true }
 )
+MyClassSchema.pre<IMyClass>('validate', async function (next) {
+    if (!this.id) {
+        this.id = await idGenerator(
+            this.constructor as Model<Document & IMyClass>
+        )
+    }
+    next()
+})
+const MyClass = model<IMyClass>('myClass', MyClassSchema)
 
-const UserCourseProgress = model<IUserCourseProgress>(
-    'userCourseProgress',
-    UserCourseProgressSchema
-)
-
-export default UserCourseProgress
+export default MyClass

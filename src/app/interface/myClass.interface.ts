@@ -28,19 +28,22 @@ export interface IWatchedLecture {
     watchedAt: Date
 }
 
-export interface IModuleProgress {
+export interface ICompletedModules {
     module: Types.ObjectId // FK → Module.id
     lecturesWatched: IWatchedLecture[]
     isCompleted: boolean
     completedAt?: Date
 }
 
-export interface IUserCourseProgress {
+export interface IMyClass {
+    id: string
     user: Types.ObjectId // FK → User.id
     course: Types.ObjectId // FK → Course.id
-    modules: IModuleProgress[]
+    completedModules: ICompletedModules[]
     overallProgress: number // %
     isCompleted: boolean
+    prevLecture: Types.ObjectId
+    currentLecture: Types.ObjectId
     completedAt?: Date
     createdAt?: Date // from { timestamps: true }
     updatedAt?: Date // from { timestamps: true }

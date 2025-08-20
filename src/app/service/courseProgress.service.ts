@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 import Course from '../model/course.model'
 import ApiError from '../helpers/ApiError'
 import User from '../model/user.model'
-import UserCourseProgress from '../model/courseProgress.model'
+import MyClass from '../model/myClass.model'
 const startCourse = async (payload: { userId: string; courseId: string }) => {
     const session = await mongoose.startSession()
     session.startTransaction()
@@ -17,7 +17,7 @@ const startCourse = async (payload: { userId: string; courseId: string }) => {
             throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
         }
 
-        await UserCourseProgress.create()
+        await MyClass.create()
     } catch (error) {}
 }
 

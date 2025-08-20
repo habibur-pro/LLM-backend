@@ -7,6 +7,9 @@ import ApiError from '../helpers/ApiError'
 import Order from '../model/order.model'
 import Course from '../model/course.model'
 import config from '../config'
+import MyClass from '../model/myClass.model'
+import User from '../model/user.model'
+import Module from '../model/module.model'
 
 const successPayment = async (req: Request, res: Response) => {
     const session = await mongoose.startSession()
@@ -32,9 +35,24 @@ const successPayment = async (req: Request, res: Response) => {
             { new: true, session }
         )
         // update course seat
-        await Course.findByIdAndUpdate(updatedOrder?.course, {
-            $inc: { availableSeat: -1 },
+        const updatedCourse = await Course.findByIdAndUpdate(
+            updatedOrder?.course,
+            {
+                $inc: { availableSeat: -1 },
+            }
+        )
+        // first module of this corse
+        const firstModule = await Module.findById(updatedCourse?.modules[0])
+
+        // create my classes for getting course progress and watch lecture
+        await MyClass.create({
+            user: updatedOrder?.user,
+            course: updatedOrder?.course,
+            overallProgress: 0,
+            prevLecture: firstModule?.lectures[0],
+            currentLecture: firstModule?.lectures[0],
         })
+
         const url = `${config.frontend_url}/order/success`
         await session.commitTransaction()
         res.redirect(url)

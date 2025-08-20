@@ -13,6 +13,7 @@ const authorize = (...allowedRoles) => (req, res, next) => {
     try {
         // 1. Extract token
         const authHeader = req.headers.authorization;
+        console.log('header', authHeader);
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, 'No token provided');
         }
