@@ -9,6 +9,7 @@ import WatchHistoryRouter from '../route/watchHistory.router'
 import OrderRouter from '../route/order.router'
 import PaymentRouter from '../route/payment.router'
 import UserRouter from '../route/user.router'
+import MyClassRouter from '../route/myCourse.router'
 type AppRoute = {
     path: string
     route: Router
@@ -49,6 +50,11 @@ const routes: AppRoute[] = [
     {
         path: '/payments',
         route: PaymentRouter,
+    },
+    {
+        path: '/my-classes',
+        route: MyClassRouter,
+        middleware: [authorize(UserRole.Student, UserRole.Admin)],
     },
 ]
 

@@ -88,7 +88,7 @@ const CourseSchema = new mongoose_1.Schema({
     },
     modules: {
         type: [mongoose_1.Schema.Types.ObjectId],
-        default: null,
+        required: [true, 'modules is required'],
         ref: 'module',
     },
 }, { timestamps: true });

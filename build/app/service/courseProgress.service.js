@@ -17,7 +17,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const course_model_1 = __importDefault(require("../model/course.model"));
 const ApiError_1 = __importDefault(require("../helpers/ApiError"));
 const user_model_1 = __importDefault(require("../model/user.model"));
-const courseProgress_model_1 = __importDefault(require("../model/courseProgress.model"));
+const myClass_model_1 = __importDefault(require("../model/myClass.model"));
 const startCourse = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const session = yield mongoose_1.default.startSession();
     session.startTransaction();
@@ -30,7 +30,7 @@ const startCourse = (payload) => __awaiter(void 0, void 0, void 0, function* () 
         if (!course) {
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'course not found');
         }
-        yield courseProgress_model_1.default.create();
+        yield myClass_model_1.default.create();
     }
     catch (error) { }
 });

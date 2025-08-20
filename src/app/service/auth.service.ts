@@ -114,7 +114,6 @@ const verifySignin = async (payload: { email: string; password: string }) => {
 
 const refreshToken = async (payload: { refreshToken?: string }) => {
     const { refreshToken } = payload
-
     if (!refreshToken || !refreshTokensDB.includes(refreshToken)) {
         throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized access')
     }

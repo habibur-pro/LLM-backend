@@ -80,7 +80,7 @@ const CourseSchema = new Schema<ICourse>(
 
         modules: {
             type: [Schema.Types.ObjectId],
-            default: null,
+            required: [true, 'modules is required'],
             ref: 'module',
         },
     },
