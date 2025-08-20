@@ -4,9 +4,7 @@ import sendResponse from '../helpers/sendResponse'
 import LectureService from '../service/lecture.service'
 
 const updateLecture = catchAsync(async (req, res) => {
-    const lectureId = req.params.lectureId
-    const file = req.uploadedFile
-    const result = await LectureService.updateLecture(lectureId, req.body, file)
+    const result = await LectureService.updateLecture(req)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,

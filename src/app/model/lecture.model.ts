@@ -1,4 +1,4 @@
-import { Document, Model, Schema, Types, model } from 'mongoose'
+import { Document, HydratedDocument, Model, Schema, model } from 'mongoose'
 import idGenerator from '../helpers/idGenerator'
 import { ILecture } from '../interface/lecture.interface'
 import { LectureContentType } from '../enum'
@@ -14,12 +14,10 @@ const LectureSchema = new Schema<ILecture>(
             type: String,
             required: [true, 'title is required'],
         },
-
-        moduleId: {
-            type: String,
-            required: [true, 'moduleId is required'],
-        },
-
+        // moduleId: {
+        //     type: String,
+        //     required: [true, 'moduleId is required'],
+        // },
         content: {
             type: String,
             required: [true, 'content is required'],
@@ -29,9 +27,14 @@ const LectureSchema = new Schema<ILecture>(
             enum: Object.values(LectureContentType),
             required: [true, 'content type is required'],
         },
+        lectureNumber: {
+            type: Number,
+            default: 0,
+        },
     },
     { timestamps: true }
 )
+
 LectureSchema.pre<ILecture>('validate', async function (next) {
     if (!this.id) {
         this.id = await idGenerator(
@@ -40,5 +43,22 @@ LectureSchema.pre<ILecture>('validate', async function (next) {
     }
     next()
 })
+
+type LectureDoc = HydratedDocument<ILecture>
+
+LectureSchema.pre<LectureDoc>('save', async function (next) {
+    if (this.isNew) {
+        const LectureModel = this.constructor as Model<ILecture>
+        const lastLecture = await LectureModel.findOne({
+            moduleId: this.moduleId,
+        })
+            .sort({ lectureNumber: -1 })
+            .lean()
+
+        this.lectureNumber = lastLecture ? lastLecture.lectureNumber + 1 : 1
+    }
+    next()
+})
+
 const Lecture = model<ILecture>('lecture', LectureSchema)
 export default Lecture

@@ -5,7 +5,7 @@
     "license": "MIT",
     "author": "HABIBUR RAHMAN",
     "scripts": {
-        "start": "node /build/app/server.ts",
+        "start": "node build/app/server.js",
         "dev": "ts-node-dev --respawn --transpile-only ./src/app/server.ts",
         "build": "tsc",
         "lint": "eslint src/**/*.ts",
@@ -27,6 +27,7 @@
         "multer": "^2.0.2",
         "nodemailer": "^7.0.5",
         "slugify": "^1.6.6",
+        "sslcommerz-lts": "^1.2.0",
         "zod": "^3.24.1"
     },
     "devDependencies": {

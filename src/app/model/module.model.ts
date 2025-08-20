@@ -22,11 +22,6 @@ const ModuleSchema = new Schema<IModule>(
             required: [true, 'title is required'],
         },
 
-        courseId: {
-            type: String,
-            required: [true, 'courseId is required'],
-        },
-
         moduleNumber: {
             type: Number,
             // required: [true, 'moduleNumber is required'],

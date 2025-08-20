@@ -5,7 +5,7 @@ import { cloudinaryUploader } from '../helpers/cloudinaryUploader'
 const router = Router()
 router.patch(
     '/:lectureId',
-    cloudinaryUploader('video'),
+    cloudinaryUploader(['video']),
     LectureController.updateLecture
 )
 const LectureRouter = router

@@ -4,15 +4,18 @@ import { Request, Response, NextFunction } from 'express'
 import path from 'path'
 import cloudinary from '../config/cloudinaryConfig'
 
-// ✅ Extend Express Request to include uploadedFile
+// ✅ Extend Express Request to include uploadedFiles
 declare global {
     namespace Express {
         interface Request {
-            uploadedFile?: {
-                filename: string
-                extension: string
-                size: number // in bytes
-                url: string
+            uploadedFiles?: {
+                [key: string]: {
+                    // key will be the field name
+                    filename: string
+                    extension: string
+                    size: number // in bytes
+                    url: string
+                }
             }
         }
     }
@@ -36,40 +39,49 @@ const uploadToCloudinary = async (
     return result.secure_url
 }
 
-// ✅ Middleware for single file upload
+/**
+ * ✅ Reusable Cloudinary uploader middleware
+ * @param fields Array of field names you want to upload
+ * @param folder Cloudinary folder to save files
+ */
 export const cloudinaryUploader = (
-    fieldName: string = 'file',
+    fields: string[] = ['file'],
     folder: string = 'minimal-LLM'
 ) => {
-    const multerHandler = upload.single(fieldName)
+    const multerHandler = upload.fields(
+        fields.map((name) => ({ name, maxCount: 1 }))
+    )
 
     return async (req: Request, res: Response, next: NextFunction) => {
         multerHandler(req, res, async (err: any) => {
             if (err) return res.status(400).json({ error: err.message })
 
             try {
-                const file = req.file
-                if (!file) {
-                    req.uploadedFile = undefined
-                    return next()
+                const uploadedFiles: Record<string, any> = {}
+
+                for (const fieldName of fields) {
+                    const fileArray = (req.files as any)?.[fieldName]
+                    if (fileArray && fileArray.length > 0) {
+                        const file = fileArray[0]
+                        const url = await uploadToCloudinary(
+                            file.buffer,
+                            file.mimetype,
+                            folder
+                        )
+                        const extension = path
+                            .extname(file.originalname)
+                            .replace('.', '')
+
+                        uploadedFiles[fieldName] = {
+                            filename: file.originalname,
+                            extension,
+                            size: file.size,
+                            url,
+                        }
+                    }
                 }
 
-                const url = await uploadToCloudinary(
-                    file.buffer,
-                    file.mimetype,
-                    folder
-                )
-                const extension = path
-                    .extname(file.originalname)
-                    .replace('.', '')
-
-                req.uploadedFile = {
-                    filename: file.originalname,
-                    extension,
-                    size: file.size,
-                    url,
-                }
-
+                req.uploadedFiles = uploadedFiles
                 next()
             } catch (uploadErr) {
                 console.error('Cloudinary upload failed:', uploadErr)

@@ -1,7 +1,7 @@
 import { Document, Model, Schema, Types, model } from 'mongoose'
 import idGenerator from '../helpers/idGenerator'
 import { ICourse } from '../interface/course.interface'
-
+import { CourseStatus } from '../enum'
 const CourseSchema = new Schema<ICourse>(
     {
         id: {
@@ -22,6 +22,10 @@ const CourseSchema = new Schema<ICourse>(
             type: Number,
             required: [true, 'price is required'],
         },
+        discountedPrice: {
+            type: Number,
+            default: 0,
+        },
 
         description: {
             type: String,
@@ -30,6 +34,14 @@ const CourseSchema = new Schema<ICourse>(
         thumbnail: {
             type: String,
             required: [true, 'thumbnail is required'],
+        },
+        coverPhoto: {
+            type: String,
+            required: [true, 'coverPhoto is required'],
+        },
+        duration: {
+            type: Number,
+            required: [true, 'duration is required'], //in minutes
         },
         totalSeat: {
             type: Number,
@@ -42,14 +54,34 @@ const CourseSchema = new Schema<ICourse>(
             default: 0,
         },
 
+        tags: {
+            type: [String],
+            default: null,
+        },
+        learningPoints: {
+            type: [String],
+            default: null,
+        },
+        requirements: {
+            type: [String],
+            default: null,
+        },
+        instructor: {
+            type: Schema.Types.ObjectId,
+            ref: 'user',
+            default: null,
+        },
+
+        status: {
+            type: String,
+            enum: Object.values(CourseStatus),
+            default: CourseStatus.UPCOMING,
+        },
+
         modules: {
             type: [Schema.Types.ObjectId],
-            default: [],
+            default: null,
             ref: 'module',
-        },
-        isPublished: {
-            type: Boolean,
-            default: true,
         },
     },
     { timestamps: true }

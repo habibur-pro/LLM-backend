@@ -10,20 +10,20 @@ router.get('/', CourseController.getAllCourse)
 router.get('/:slugOrId/modules', CourseController.getModuleOfCourse)
 router.post(
     '/:slugOrId/modules',
-    authorize(UserRole.Admin),
+    // authorize(UserRole.Admin),
     CourseController.addCourseModule
 )
 router.get('/:slugOrId', CourseController.getCourseBySlugAndId)
 router.patch(
     '/:slugOrId',
     authorize(UserRole.Admin),
-    cloudinaryUploader('thumbnail'),
+    cloudinaryUploader(['thumbnail', 'coverPhoto']),
     CourseController.updateCourse
 )
 router.post(
     '/',
-    authorize(UserRole.Admin),
-    cloudinaryUploader('thumbnail'),
+    // authorize(UserRole.Admin),
+    cloudinaryUploader(['thumbnail', 'coverPhoto']),
     CourseController.addCourse
 )
 const CourseRouter = router

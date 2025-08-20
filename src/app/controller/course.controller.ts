@@ -5,7 +5,7 @@ import CourseService from '../service/course.service'
 import ApiError from '../helpers/ApiError'
 
 const addCourse = catchAsync(async (req, res) => {
-    const result = await CourseService.addCourse(req.uploadedFile, req.body)
+    const result = await CourseService.addCourse(req)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
@@ -24,12 +24,7 @@ const getCourseBySlugAndId = catchAsync(async (req, res) => {
     })
 })
 const updateCourse = catchAsync(async (req, res) => {
-    const identifier = req.params.slugOrId
-    const result = await CourseService.updateCourse(
-        identifier,
-        req.body,
-        req.uploadedFile
-    )
+    const result = await CourseService.updateCourse(req)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,

@@ -1,26 +1,19 @@
+import { Request } from 'express'
 import ApiError from '../helpers/ApiError'
 import { ILecture } from '../interface/lecture.interface'
 import Lecture from '../model/lecture.model'
 import httpStatus from 'http-status'
-type uploadedFileType =
-    | {
-          filename: string
-          extension: string
-          size: number
-          url: string
-      }
-    | undefined
-const updateLecture = async (
-    id: string,
-    payload: Partial<ILecture>,
-    file: uploadedFileType
-) => {
+
+const updateLecture = async (req: Request) => {
+    const id = req.params.lectureId
+    const payload: Partial<ILecture> = req.body
+    const { video } = req?.uploadedFiles || {}
     const lecture = await Lecture.findOne({ id })
     if (!lecture) {
         throw new ApiError(httpStatus.BAD_REQUEST, 'lecture not found')
     }
-    if (file) {
-        payload.content = file.url
+    if (video) {
+        payload.content = video?.url
     }
 
     await Lecture.findOneAndUpdate({ id }, payload, { new: true })

@@ -5,6 +5,10 @@ import ModuleRouter from '../route/module.router'
 import LectureRouter from '../route/lecture.router'
 import { authorize } from '../helpers/authorize'
 import { UserRole } from '../enum'
+import WatchHistoryRouter from '../route/watchHistory.router'
+import OrderRouter from '../route/order.router'
+import PaymentRouter from '../route/payment.router'
+import UserRouter from '../route/user.router'
 type AppRoute = {
     path: string
     route: Router
@@ -15,6 +19,10 @@ const routes: AppRoute[] = [
     {
         path: '/auth',
         route: AuthRouter,
+    },
+    {
+        path: '/users',
+        route: UserRouter,
     },
     {
         path: '/courses',
@@ -29,6 +37,18 @@ const routes: AppRoute[] = [
         path: '/lectures',
         route: LectureRouter,
         middleware: [authorize(UserRole.Admin)],
+    },
+    {
+        path: '/watch-history',
+        route: WatchHistoryRouter,
+    },
+    {
+        path: '/orders',
+        route: OrderRouter,
+    },
+    {
+        path: '/payments',
+        route: PaymentRouter,
     },
 ]
 
