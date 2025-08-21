@@ -47,7 +47,7 @@ const successPayment = (req, res) => __awaiter(void 0, void 0, void 0, function*
             user: updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.user,
             course: updatedOrder === null || updatedOrder === void 0 ? void 0 : updatedOrder.course,
             overallProgress: 0,
-            prevLecture: firstModule === null || firstModule === void 0 ? void 0 : firstModule.lectures[0],
+            // prevLecture: firstModule?.lectures[0],
             currentLecture: firstModule === null || firstModule === void 0 ? void 0 : firstModule.lectures[0],
         });
         const url = `${config_1.default.frontend_url}/order/success`;

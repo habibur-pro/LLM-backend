@@ -6,28 +6,7 @@ import {
 } from '../interface/myClass.interface'
 import idGenerator from '../helpers/idGenerator'
 
-// interface IWatchedLecture {
-//     lectureId: string // FK → Lecture.id
-//     watchedAt: Date
-// }
-
-// interface IModuleProgress {
-//     moduleId: string // FK → Module.id
-//     lecturesWatched: IWatchedLecture[] // Array of watched lectures
-//     isCompleted: boolean
-//     completedAt?: Date
-// }
-
-// export interface IUserCourseProgress extends Document {
-//     userId: string // FK → User.id
-//     courseId: string // FK → Course.id
-//     modules: IModuleProgress[]
-//     overallProgress: number // %
-//     isCompleted: boolean
-//     completedAt?: Date
-// }
-
-const WatchedLectureSchema = new Schema<IWatchedLecture>({
+const lecture = new Schema<IWatchedLecture>({
     lecture: {
         type: Schema.Types.ObjectId,
         required: [true, 'lectured is required'],
@@ -35,12 +14,12 @@ const WatchedLectureSchema = new Schema<IWatchedLecture>({
     watchedAt: { type: Date, default: Date.now },
 })
 
-const ModuleProgressSchema = new Schema<ICompletedModules>({
+const ModuleSchema = new Schema<ICompletedModules>({
     module: {
         type: Schema.Types.ObjectId,
         required: [true, 'module is required'],
     },
-    lecturesWatched: { type: [WatchedLectureSchema], default: [] },
+    lectures: { type: [lecture], default: [] },
     isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date, default: null },
 })
@@ -61,13 +40,8 @@ const MyClassSchema = new Schema<IMyClass>(
             required: [true, 'course is required'],
             ref: 'course',
         },
-        completedModules: { type: [ModuleProgressSchema], default: [] },
+        modules: { type: [ModuleSchema], default: [] },
         overallProgress: { type: Number, default: 0 },
-        prevLecture: {
-            type: Schema.Types.ObjectId,
-            require: [true, 'current lecture is required'],
-            ref: 'lecture',
-        },
         currentLecture: {
             type: Schema.Types.ObjectId,
             require: [true, 'current lecture is required'],

@@ -3,34 +3,17 @@
 //     watchedAt: Date
 // }
 
-import { Types } from 'mongoose'
-
-// export interface IModuleProgress {
-//     moduleId: string // FK → Module.id
-//     lecturesWatched: IWatchedLecture[]
-//     isCompleted: boolean
-//     completedAt?: Date
-// }
-
-// export interface IUserCourseProgress {
-//     userId: string // FK → User.id
-//     courseId: string // FK → Course.id
-//     modules: IModuleProgress[]
-//     overallProgress: number // %
-//     isCompleted: boolean
-//     completedAt?: Date
-//     createdAt?: Date // from { timestamps: true }
-//     updatedAt?: Date // from { timestamps: true }
-// }
+import { Document, Types } from 'mongoose'
 
 export interface IWatchedLecture {
     lecture: Types.ObjectId // FK → Lecture.id
+    isLocked: boolean
     watchedAt: Date
 }
 
 export interface ICompletedModules {
     module: Types.ObjectId // FK → Module.id
-    lecturesWatched: IWatchedLecture[]
+    lectures: IWatchedLecture[]
     isCompleted: boolean
     completedAt?: Date
 }
@@ -39,7 +22,7 @@ export interface IMyClass {
     id: string
     user: Types.ObjectId // FK → User.id
     course: Types.ObjectId // FK → Course.id
-    completedModules: ICompletedModules[]
+    modules: ICompletedModules[]
     overallProgress: number // %
     isCompleted: boolean
     prevLecture: Types.ObjectId

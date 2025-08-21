@@ -49,7 +49,7 @@ const successPayment = async (req: Request, res: Response) => {
             user: updatedOrder?.user,
             course: updatedOrder?.course,
             overallProgress: 0,
-            prevLecture: firstModule?.lectures[0],
+            // prevLecture: firstModule?.lectures[0],
             currentLecture: firstModule?.lectures[0],
         })
 
