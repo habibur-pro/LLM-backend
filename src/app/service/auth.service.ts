@@ -8,6 +8,7 @@ import User from '../model/user.model'
 import ApiError from '../helpers/ApiError'
 import { getErrorMessage } from '../helpers/getErrorMessage'
 const refreshTokensDB: string[] = []
+
 function generateAccessToken(user: any) {
     return jwt.sign(user, config.access_token_secret, {
         expiresIn: config.access_token_expires_in as any,
@@ -51,47 +52,60 @@ const signup = async (payload: Partial<IUser>) => {
 }
 
 const signin = async (payload: { email: string; password: string }) => {
-    if (!payload?.email || !payload?.password) {
+    try {
+        if (!payload?.email || !payload?.password) {
+            throw new ApiError(
+                httpStatus.BAD_REQUEST,
+                'email, password is required'
+            )
+        }
+
+        const user = await User.findOne({ email: payload.email })
+        if (!user) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'user not found')
+        }
+        const isMatched = await bcrypt.compare(payload.password, user.password)
+        if (!isMatched) {
+            throw new ApiError(
+                httpStatus.BAD_REQUEST,
+                'wrong email or password'
+            )
+        }
+
+        const accessToken = generateAccessToken({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        })
+
+        const refreshToken = generateRefreshToken({
+            id: user.id,
+        })
+        // calculate expiry timestamps
+        const accessTokenExpiresInMs = ms(
+            (config.access_token_expires_in as any) || '15m'
+        )
+        const refreshTokenExpiresInMs = ms(
+            (config.refresh_token_expires_in as any) || '7d'
+        )
+        const responseData = {
+            id: user.id,
+            name: user.name,
+            accessToken,
+            refreshToken,
+            email: user.email,
+            role: user.role,
+            accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
+        }
+
+        return responseData
+    } catch (error) {
+        console.log('signin error', error)
         throw new ApiError(
             httpStatus.BAD_REQUEST,
-            'email, password is required'
+            getErrorMessage(error) || 'something went wrong'
         )
     }
-
-    const user = await User.findOne({ email: payload.email })
-    if (!user) {
-        throw new ApiError(httpStatus.BAD_REQUEST, 'user not found')
-    }
-    const isMatched = await bcrypt.compare(payload.password, user.password)
-    if (!isMatched) {
-        throw new ApiError(httpStatus.BAD_REQUEST, 'wrong email or password')
-    }
-
-    const accessToken = generateAccessToken({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-    })
-    const refreshToken = generateRefreshToken({
-        id: user.id,
-    })
-    // calculate expiry timestamps
-    const accessTokenExpiresInMs = ms(
-        (config.access_token_expires_in as any) || '15m'
-    )
-    const refreshTokenExpiresInMs = ms(
-        (config.refresh_token_expires_in as any) || '7d'
-    )
-    const responseData = {
-        id: user.id,
-        name: user.name,
-        accessToken,
-        refreshToken,
-        email: user.email,
-        role: user.role,
-        accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
-    }
-    return responseData
 }
 const verifySignin = async (payload: { email: string; password: string }) => {
     if (!payload?.email || !payload?.password) {
@@ -100,7 +114,7 @@ const verifySignin = async (payload: { email: string; password: string }) => {
             'email and password is required'
         )
     }
-
+    console.log(payload)
     const user = await User.findOne({ email: payload.email })
     if (!user) {
         throw new ApiError(httpStatus.BAD_REQUEST, 'user not found')

@@ -54,43 +54,50 @@ const signup = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 const signin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    if (!(payload === null || payload === void 0 ? void 0 : payload.email) || !(payload === null || payload === void 0 ? void 0 : payload.password)) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'email, password is required');
+    try {
+        if (!(payload === null || payload === void 0 ? void 0 : payload.email) || !(payload === null || payload === void 0 ? void 0 : payload.password)) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'email, password is required');
+        }
+        const user = yield user_model_1.default.findOne({ email: payload.email });
+        if (!user) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'user not found');
+        }
+        const isMatched = yield bcrypt_1.default.compare(payload.password, user.password);
+        if (!isMatched) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'wrong email or password');
+        }
+        const accessToken = generateAccessToken({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        });
+        const refreshToken = generateRefreshToken({
+            id: user.id,
+        });
+        // calculate expiry timestamps
+        const accessTokenExpiresInMs = (0, ms_1.default)(config_1.default.access_token_expires_in || '15m');
+        const refreshTokenExpiresInMs = (0, ms_1.default)(config_1.default.refresh_token_expires_in || '7d');
+        const responseData = {
+            id: user.id,
+            name: user.name,
+            accessToken,
+            refreshToken,
+            email: user.email,
+            role: user.role,
+            accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
+        };
+        return responseData;
     }
-    const user = yield user_model_1.default.findOne({ email: payload.email });
-    if (!user) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'user not found');
+    catch (error) {
+        console.log('signin error', error);
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, (0, getErrorMessage_1.getErrorMessage)(error) || 'something went wrong');
     }
-    const isMatched = yield bcrypt_1.default.compare(payload.password, user.password);
-    if (!isMatched) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'wrong email or password');
-    }
-    const accessToken = generateAccessToken({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-    });
-    const refreshToken = generateRefreshToken({
-        id: user.id,
-    });
-    // calculate expiry timestamps
-    const accessTokenExpiresInMs = (0, ms_1.default)(config_1.default.access_token_expires_in || '15m');
-    const refreshTokenExpiresInMs = (0, ms_1.default)(config_1.default.refresh_token_expires_in || '7d');
-    const responseData = {
-        id: user.id,
-        name: user.name,
-        accessToken,
-        refreshToken,
-        email: user.email,
-        role: user.role,
-        accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
-    };
-    return responseData;
 });
 const verifySignin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     if (!(payload === null || payload === void 0 ? void 0 : payload.email) || !(payload === null || payload === void 0 ? void 0 : payload.password)) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'email and password is required');
     }
+    console.log(payload);
     const user = yield user_model_1.default.findOne({ email: payload.email });
     if (!user) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'user not found');

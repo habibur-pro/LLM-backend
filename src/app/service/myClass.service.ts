@@ -7,6 +7,9 @@ import CourseProgressService from './courseProgress.service'
 import User from '../model/user.model'
 import mongoose, { Types } from 'mongoose'
 import Course from '../model/course.model'
+import { ICompletedModules, IMyClass } from '../interface/myClass.interface'
+import Module from '../model/module.model'
+import Lecture from '../model/lecture.model'
 
 export interface ILecture extends Document {
     _id: Types.ObjectId
@@ -38,319 +41,361 @@ const getMyClasses = async (req: Request) => {
     return await MyClass.find({ user: user._id }).populate('course')
 }
 
-export const nextLecture = async (progressId: string) => {
-    const session = await mongoose.startSession()
-    session.startTransaction()
+// Adjust path to IMyClass
 
-    try {
-        // 1. Load course progress
-        const courseProgress = await MyClass.findOne({
-            id: progressId,
-        }).session(session)
-        if (!courseProgress) {
-            throw new Error('Progress not found')
+const nextLecture = async (classId: string) => {
+    // 1. Fetch the user's class and course structure in one query.
+    const myClass = (await MyClass.findOne({ id: classId }).populate({
+        path: 'course',
+        populate: {
+            path: 'modules',
+            populate: {
+                path: 'lectures',
+            },
+        },
+    })) as (IMyClass & { course: ICourse & { modules: IModule[] } }) | null
+
+    if (!myClass) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Class not found')
+    }
+
+    if (myClass.isCompleted) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'This course is already completed.'
+        )
+    }
+
+    const course = myClass.course
+    if (!course) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Course not found for this class.'
+        )
+    }
+
+    // Determine the current lecture ID from the myClass document.
+    const currentLectureId = myClass.currentLecture
+        ? myClass.currentLecture.toString()
+        : null
+
+    if (!currentLectureId) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Current lecture not specified in class data.'
+        )
+    }
+
+    // Find the current module and lecture in the populated course structure.
+    let currentModuleIndex = -1
+    let currentLectureIndex = -1
+    for (let i = 0; i < course.modules.length; i++) {
+        currentLectureIndex = course.modules[i].lectures.findIndex(
+            (lec) => lec._id.toString() === currentLectureId
+        )
+        if (currentLectureIndex !== -1) {
+            currentModuleIndex = i
+            break
         }
+    }
 
-        // 2. Load course with populated modules + lectures
-        const course = await Course.findById(courseProgress.course)
-            .populate<{ modules: IModule[] }>({
-                path: 'modules',
-                populate: { path: 'lectures' },
-            })
-            .session(session)
+    if (currentModuleIndex === -1) {
+        throw new ApiError(
+            httpStatus.NOT_FOUND,
+            'Current lecture not found in the course.'
+        )
+    }
 
-        if (!course) {
-            throw new Error('Course not found')
-        }
+    const currentModule = course.modules[currentModuleIndex]
+    const currentLecture =
+        course.modules[currentModuleIndex].lectures[currentLectureIndex]
 
-        // 3. Find current module and lecture index
-        let currentModule: IModule | undefined
-        let lectureIndex = -1
+    // 2. Prepare the database update with a single operation for atomicity.
+    const updateOps: any = { $set: {} }
 
-        for (const module of course.modules) {
-            lectureIndex = module.lectures.findIndex(
-                (lec: ILecture) =>
-                    lec._id.toString() ===
-                    courseProgress.currentLecture.toString()
+    // Check if the current lecture has already been watched to prevent duplicate entries.
+    const isAlreadyWatched = myClass.modules.some(
+        (mp) =>
+            mp.module.toString() === currentModule._id.toString() &&
+            mp.lectures.some(
+                (lec) =>
+                    lec.lecture.toString() === currentLecture._id.toString()
             )
-            if (lectureIndex !== -1) {
-                currentModule = module
-                break
-            }
-        }
+    )
 
-        if (!currentModule)
-            throw new Error('Current lecture not found in course')
-
-        // 4. Mark lecture as watched
-        const moduleProgress = courseProgress.completedModules.find(
-            (m) => m.module.toString() === currentModule!._id.toString()
+    if (!isAlreadyWatched) {
+        // Find the index of the module progress in the user's modules array.
+        const moduleProgressIndex = myClass.modules.findIndex(
+            (mp) => mp.module.toString() === currentModule._id.toString()
         )
 
-        if (moduleProgress) {
-            if (
-                !moduleProgress.lecturesWatched.some(
-                    (w) =>
-                        w.lecture.toString() ===
-                        courseProgress.currentLecture.toString()
-                )
-            ) {
-                moduleProgress.lecturesWatched.push({
-                    lecture: courseProgress.currentLecture,
+        if (moduleProgressIndex !== -1) {
+            // The module progress entry already exists, so atomically push the new lecture.
+            updateOps.$push = {
+                [`modules.${moduleProgressIndex}.lectures`]: {
+                    lecture: currentLecture._id,
                     watchedAt: new Date(),
-                })
+                },
             }
         } else {
-            courseProgress.completedModules.push({
-                module: currentModule._id,
-                lecturesWatched: [
-                    {
-                        lecture: courseProgress.currentLecture,
-                        watchedAt: new Date(),
-                    },
-                ],
-                isCompleted: false, // required by ICompletedModules
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                //@ts-ignore
-                completedAt: null, // optional but good to initialize
-            })
-        }
-
-        // 5. Decide next lecture
-        let nextLecture: ILecture | null = null
-
-        if (lectureIndex + 1 < currentModule.lectures.length) {
-            // same module → next lecture
-            nextLecture = currentModule.lectures[lectureIndex + 1]
-        } else {
-            // module finished → move to next module
-            const moduleIndex = course.modules.findIndex(
-                (m) => m._id.toString() === currentModule!._id.toString()
-            )
-
-            // mark module complete
-            const moduleProg = courseProgress.completedModules.find(
-                (m) => m.module.toString() === currentModule!._id.toString()
-            )
-            if (moduleProg) {
-                moduleProg.isCompleted = true
-                moduleProg.completedAt = new Date()
-            }
-
-            if (moduleIndex + 1 < course.modules.length) {
-                nextLecture = course.modules[moduleIndex + 1].lectures[0]
-            } else {
-                // entire course complete
-                courseProgress.isCompleted = true
-                courseProgress.completedAt = new Date()
+            // The module progress entry does not exist, so atomically push a new one.
+            updateOps.$push = {
+                modules: {
+                    module: currentModule._id,
+                    lectures: [
+                        { lecture: currentLecture._id, watchedAt: new Date() },
+                    ],
+                    isCompleted: false,
+                },
             }
         }
-
-        // 6. Update progress state
-        if (nextLecture) {
-            courseProgress.prevLecture = courseProgress.currentLecture
-            courseProgress.currentLecture = nextLecture._id
-        }
-
-        // 7. Update overall progress (%)
-        const totalLectures = course.modules.reduce(
-            (sum, m) => sum + m.lectures.length,
-            0
-        )
-        const watchedLectures = courseProgress.completedModules.reduce(
-            (sum, m) => sum + m.lecturesWatched.length,
-            0
-        )
-        courseProgress.overallProgress = Math.round(
-            (watchedLectures / totalLectures) * 100
-        )
-
-        await courseProgress.save({ session })
-        await session.commitTransaction()
-        session.endSession()
-
-        return courseProgress
-    } catch (error) {
-        await session.abortTransaction()
-        session.endSession()
-        throw error
     }
+
+    // Check if the current module is now completed.
+    const moduleProgress = myClass.modules.find(
+        (mp) => mp.module.toString() === currentModule._id.toString()
+    )
+    const lecturesInModuleCount = moduleProgress
+        ? moduleProgress.lectures.length + (isAlreadyWatched ? 0 : 1)
+        : 1
+
+    if (lecturesInModuleCount === currentModule.lectures.length) {
+        const moduleIndexToUpdate = myClass.modules.findIndex(
+            (mp) => mp.module.toString() === currentModule._id.toString()
+        )
+        if (moduleIndexToUpdate !== -1) {
+            updateOps.$set[`modules.${moduleIndexToUpdate}.isCompleted`] = true
+            updateOps.$set[`modules.${moduleIndexToUpdate}.completedAt`] =
+                new Date()
+        }
+    }
+
+    // 3. Find the next lecture.
+    let nextLecture = null
+    if (currentLectureIndex + 1 < currentModule.lectures.length) {
+        nextLecture = currentModule.lectures[currentLectureIndex + 1]
+    } else if (currentModuleIndex + 1 < course.modules.length) {
+        const nextModule = course.modules[currentModuleIndex + 1]
+        nextLecture = nextModule.lectures[0]
+    }
+
+    // 4. Calculate overall progress.
+    let totalLectures = 0
+    course.modules.forEach((module) => {
+        totalLectures += module.lectures.length
+    })
+
+    const completedLecturesCount =
+        myClass.modules.reduce((sum, mp) => sum + mp.lectures.length, 0) +
+        (isAlreadyWatched ? 0 : 1)
+
+    const overallProgress =
+        totalLectures > 0 ? (completedLecturesCount / totalLectures) * 100 : 0
+
+    updateOps.$set.overallProgress = overallProgress
+
+    // 5. Final update based on whether a next lecture exists.
+    if (nextLecture) {
+        updateOps.$set.currentLecture = nextLecture._id
+    } else {
+        updateOps.$set.isCompleted = true
+        updateOps.$set.completedAt = new Date()
+        updateOps.$set.overallProgress = 100
+        updateOps.$unset = { currentLecture: '' }
+    }
+
+    // Execute the single atomic update query.
+    const updatedMyClass = await MyClass.findOneAndUpdate(
+        { id: classId },
+        updateOps,
+        { new: true, runValidators: true }
+    )
+
+    return updatedMyClass
 }
 
-const previousLecture = async (progressId: string) => {
-    const session = await mongoose.startSession()
-    session.startTransaction()
+const previousLecture = async (classId: string) => {
+    // 1. Fetch the MyClass document with the full course structure.
+    const myClass = (await MyClass.findOne({ id: classId }).populate({
+        path: 'course',
+        populate: {
+            path: 'modules',
+            populate: {
+                path: 'lectures',
+            },
+        },
+    })) as (IMyClass & { course: ICourse & { modules: IModule[] } }) | null
 
-    try {
-        // 1. Load progress
-        const courseProgress = await MyClass.findOne({
-            id: progressId,
-        }).session(session)
-        if (!courseProgress) throw new Error('Progress not found')
-
-        // 2. Load course with modules + lectures populated
-        const course = await Course.findById(courseProgress.course)
-            .populate<{ modules: IModule[] }>({
-                path: 'modules',
-                populate: { path: 'lectures' },
-            })
-            .session(session)
-
-        if (!course) throw new Error('Course not found')
-
-        // 3. Find current module and lecture
-        let currentModule: IModule | undefined
-        let lectureIndex = -1
-
-        for (const module of course.modules) {
-            lectureIndex = module.lectures.findIndex(
-                (lec: ILecture) =>
-                    lec._id.toString() ===
-                    courseProgress.currentLecture.toString()
-            )
-            if (lectureIndex !== -1) {
-                currentModule = module
-                break
-            }
-        }
-
-        if (!currentModule)
-            throw new Error('Current lecture not found in course')
-
-        // 4. Decide previous lecture
-        let previousLecture: ILecture | null = null
-
-        if (lectureIndex > 0) {
-            // case: previous lecture in the same module
-            previousLecture = currentModule.lectures[lectureIndex - 1]
-        } else {
-            // case: if it's the first lecture of the module → go to last lecture of previous module
-            const moduleIndex = course.modules.findIndex(
-                (m) => m._id.toString() === currentModule!._id.toString()
-            )
-
-            if (moduleIndex > 0) {
-                const prevModule = course.modules[moduleIndex - 1]
-                previousLecture =
-                    prevModule.lectures[prevModule.lectures.length - 1]
-            }
-        }
-
-        if (!previousLecture) {
-            throw new Error('No previous lecture available')
-        }
-
-        // 5. Update progress
-        courseProgress.prevLecture = courseProgress.currentLecture
-        courseProgress.currentLecture = previousLecture._id
-
-        await courseProgress.save({ session })
-        await session.commitTransaction()
-        session.endSession()
-
-        return courseProgress
-    } catch (error) {
-        await session.abortTransaction()
-        session.endSession()
-        throw error
+    // 2. Perform necessary validation checks.
+    if (!myClass) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Class not found')
     }
+
+    const { course } = myClass
+    if (!course) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Course not found for this class.'
+        )
+    }
+
+    // 3. Get the ID of the current lecture.
+    const currentLectureId = myClass.currentLecture
+        ? myClass.currentLecture.toString()
+        : null
+    if (!currentLectureId) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Current lecture not specified in class data.'
+        )
+    }
+
+    // 4. Find the current lecture and module by iterating through the course structure.
+    let currentModuleIndex = -1
+    let currentLectureIndex = -1
+
+    for (let i = 0; i < course.modules.length; i++) {
+        currentLectureIndex = course.modules[i].lectures.findIndex(
+            (lec) => lec._id.toString() === currentLectureId
+        )
+        if (currentLectureIndex !== -1) {
+            currentModuleIndex = i
+            break
+        }
+    }
+
+    // 5. Check if the current lecture was found.
+    if (currentModuleIndex === -1) {
+        throw new ApiError(
+            httpStatus.NOT_FOUND,
+            'Current lecture not found in the course.'
+        )
+    }
+
+    const currentModule = course.modules[currentModuleIndex]
+
+    // 6. Find the previous lecture.
+    let previousLecture = null
+    if (currentLectureIndex > 0) {
+        // If not the first lecture of the current module, get the previous one in the same module.
+        previousLecture = currentModule.lectures[currentLectureIndex - 1]
+    } else if (currentModuleIndex > 0) {
+        // If it is the first lecture of the current module, get the last lecture of the previous module.
+        const previousModule = course.modules[currentModuleIndex - 1]
+        previousLecture =
+            previousModule.lectures[previousModule.lectures.length - 1]
+    } else {
+        // No previous lecture exists (it's the very first lecture of the course).
+        // In this case, we don't update anything and simply return the current lecture ID.
+        return myClass.currentLecture
+    }
+
+    // 7. Update the MyClass document in the database with the ID of the previous lecture.
+    const updatedMyClass = await MyClass.findOneAndUpdate(
+        { id: classId },
+        { $set: { currentLecture: previousLecture._id } },
+        { new: true }
+    )
+
+    // 8. Return the ID of the new current lecture.
+    return updatedMyClass?.currentLecture
 }
 
-// Function to get a single myClass with progress and lecture lock/unlock
 const getSingleClassWithProgress = async (classId: string) => {
-    const myClass = await MyClass.findOne({ id: classId })
+    // 1. Fetch the MyClass document and fully populate all related data.
+    const myClass = (await MyClass.findOne({ id: classId })
         .populate({
             path: 'course',
             populate: {
                 path: 'modules',
                 populate: {
-                    path: 'lectures', // fully populate each lecture
+                    path: 'lectures',
                 },
             },
         })
-        .lean()
+        .lean()) as
+        | (IMyClass & { course: ICourse & { modules: IModule[] } })
+        | null
 
-    if (!myClass) throw new Error('Class not found')
-
-    const course = myClass.course
-    //@ts-ignore
-    if (!course?.modules) {
-        return {
-            ...myClass,
-            progress: 0,
-            currentLecture: null,
-            nextLecture: null,
-        }
+    if (!myClass) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Class not found')
     }
 
-    const completedLectures = new Set(
-        (myClass.completedModules || []).flatMap((m: any) =>
-            m.lecturesWatched.map((w: any) => w.lecture.toString())
+    const { course } = myClass
+    const myClassModules = myClass.modules
+
+    if (!course) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Course not found for this class.'
         )
-    )
+    }
 
     let totalLectures = 0
-    let completedLecturesCount = 0
-    let unlockedLectureFound = false
+    let unlockedLecturesCount = 0
 
-    let currentLecture: any = null
-    let nextLecture: any = null
-    let foundCurrent = false
-    //@ts-ignore
-    const modulesWithStatus = course.modules.map((module: any) => {
-        let moduleCompletedLectures = 0
+    // Find the current lecture's module ID
+    let currentModuleId = null
 
-        const lecturesWithStatus = module.lectures.map((lecture: any) => {
-            totalLectures++
+    const processedModules = course.modules.map((courseModule) => {
+        const moduleProgress = myClassModules.find(
+            (item) => item.module.toString() === courseModule._id.toString()
+        )
 
-            const isCompleted = completedLectures.has(lecture._id.toString())
-            if (isCompleted) {
-                completedLecturesCount++
-                moduleCompletedLectures++
+        const isModuleCompleted = !!moduleProgress?.isCompleted
+
+        // Process lectures within this module.
+        const processedLectures = courseModule.lectures.map((lecture) => {
+            totalLectures++ // Increment total lecture count
+
+            const lectureWatched = moduleProgress?.lectures.find(
+                (watchedLec) =>
+                    watchedLec.lecture.toString() === lecture._id.toString()
+            )
+
+            // Check if the lecture is completed or is the current lecture being watched.
+            const isLectureCompleted = !!lectureWatched
+            const isCurrentLecture =
+                lecture._id.toString() === myClass.currentLecture?.toString()
+
+            // A lecture is unlocked if it's completed or if it's the current one.
+            const isLectureUnlocked = isLectureCompleted || isCurrentLecture
+
+            if (isLectureUnlocked) {
+                unlockedLecturesCount++
             }
 
-            const isUnlocked =
-                isCompleted || (!unlockedLectureFound && !isCompleted)
-            if (!isCompleted && !unlockedLectureFound) {
-                unlockedLectureFound = true
-            }
-
-            // Set current and next lecture
-            if (!foundCurrent && !isCompleted) {
-                currentLecture = lecture // full populated lecture
-                foundCurrent = true
-            } else if (foundCurrent && !nextLecture) {
-                nextLecture = lecture // full populated lecture
+            // Set the current module ID if this is the current lecture
+            if (isCurrentLecture) {
+                currentModuleId = courseModule._id
             }
 
             return {
                 ...lecture,
-                isCompleted,
-                isUnlocked,
+                isCompleted: isLectureCompleted,
+                isLocked: !isLectureUnlocked, // isLocked is the inverse of isLectureUnlocked
             }
         })
 
         return {
-            ...module,
-            lectures: lecturesWithStatus,
-            isCompleted: moduleCompletedLectures === module.lectures.length,
+            ...courseModule,
+            isCompleted: isModuleCompleted,
+            lectures: processedLectures,
         }
     })
 
-    const progress =
-        totalLectures > 0
-            ? Math.round((completedLecturesCount / totalLectures) * 100)
-            : 0
-
+    const overallProgressPercentage =
+        totalLectures > 0 ? (unlockedLecturesCount / totalLectures) * 100 : 0
+    const currentLectureData = await Lecture.findById(myClass.currentLecture)
     return {
-        ...myClass,
+        currentLecture: currentLectureData,
+        currentModuleId: currentModuleId, // The new field with the current module ID
         course: {
             ...course,
-            modules: modulesWithStatus,
+            modules: processedModules,
         },
-        progress,
-        currentLecture,
-        nextLecture,
+        overallProgress: overallProgressPercentage,
+        unlockedLecturesCount: unlockedLecturesCount,
     }
 }
 const MyClassService = {
