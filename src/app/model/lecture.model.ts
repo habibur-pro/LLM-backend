@@ -27,6 +27,10 @@ const LectureSchema = new Schema<ILecture>(
             enum: Object.values(LectureContentType),
             required: [true, 'content type is required'],
         },
+        notes: {
+            type: [String],
+            default: null,
+        },
         lectureNumber: {
             type: Number,
             default: 0,

@@ -23,9 +23,19 @@ const addLecture = catchAsync(async (req, res) => {
         data: result,
     })
 })
+const deleteModule = catchAsync(async (req, res) => {
+    const result = await ModuleService.deleteModule(req)
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'module deleted successfully',
+        data: result,
+    })
+})
 
 const ModuleController = {
     updateModule,
     addLecture,
+    deleteModule,
 }
 export default ModuleController

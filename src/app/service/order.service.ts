@@ -59,7 +59,7 @@ const placeOrder = async (req: Request) => {
         const store_id = config.ssl_store_id as string
         const store_passwd = config.ssl_store_pass as string
         const is_live = config.is_payment_live === 'true' ? true : false
-        const baseUrl = `${req.protocol}://${req.get('host')}/api/v1/payments`
+        const baseUrl = `${config.backend_url}/api/v1/payments`
         // const tranId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
         const data = {
             total_amount: course.price,

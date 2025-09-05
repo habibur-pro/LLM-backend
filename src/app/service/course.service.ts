@@ -104,34 +104,43 @@ const getCourseBySlugAndId = async (identifier: string) => {
     })
 }
 const updateCourse = async (req: Request) => {
-    const identifier = req.params.slugOrId
+    try {
+        const identifier = req.params.slugOrId
 
-    const payload: Partial<ICourse> = req.body
-    const { coverPhoto, thumbnail } = req?.uploadedFiles || {}
-    const course = await Course.findOne({
-        $or: [{ id: identifier }, { slug: identifier }],
-    })
-    if (!course) {
-        throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
-    }
-    delete payload.id
-    delete payload.slug
-    if (coverPhoto) {
-        payload.coverPhoto = coverPhoto?.url || course.coverPhoto
-    }
-    if (thumbnail) {
-        payload.thumbnail = thumbnail?.url || course.thumbnail
-    }
-    await Course.findOneAndUpdate(
-        {
+        const payload: Partial<ICourse> = req.body
+        // user can not update module by this api
+        delete payload.modules
+        const { coverPhoto, thumbnail } = req?.uploadedFiles || {}
+        const course = await Course.findOne({
             $or: [{ id: identifier }, { slug: identifier }],
-        },
-        payload,
-        {
-            new: true,
+        })
+        if (!course) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
         }
-    )
-    return { message: 'updated' }
+        delete payload.id
+        delete payload.slug
+        if (coverPhoto) {
+            payload.coverPhoto = coverPhoto?.url || course.coverPhoto
+        }
+        if (thumbnail) {
+            payload.thumbnail = thumbnail?.url || course.thumbnail
+        }
+        console.log('payload', payload)
+        await Course.findOneAndUpdate(
+            {
+                $or: [{ id: identifier }, { slug: identifier }],
+            },
+            payload,
+            {
+                new: true,
+            }
+        )
+
+        return { message: 'updated' }
+    } catch (error) {
+        console.log('error', error)
+        throw new ApiError(httpStatus.BAD_REQUEST, getErrorMessage(error))
+    }
 }
 
 const getModuleOfCourse = async (identifier: string) => {

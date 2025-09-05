@@ -8,5 +8,6 @@ router.patch(
     cloudinaryUploader(['video']),
     LectureController.updateLecture
 )
+router.delete('/:lectureId', LectureController.deleteLecture)
 const LectureRouter = router
 export default LectureRouter
