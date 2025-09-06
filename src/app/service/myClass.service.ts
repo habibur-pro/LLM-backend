@@ -201,7 +201,6 @@ const nextLecture = async (classId: string) => {
         updateOps.$set.isCompleted = true
         updateOps.$set.completedAt = new Date()
         updateOps.$set.overallProgress = 100
-        updateOps.$unset = { currentLecture: '' }
     }
 
     // Execute the single atomic update query.
@@ -322,8 +321,6 @@ const getSingleClassWithProgress = async (classId: string) => {
     }
 
     const { course } = myClass
-    const myClassModules = myClass.modules
-
     if (!course) {
         throw new ApiError(
             httpStatus.BAD_REQUEST,
@@ -332,40 +329,45 @@ const getSingleClassWithProgress = async (classId: string) => {
     }
 
     let totalLectures = 0
-    let unlockedLecturesCount = 0
-
-    // Find the current lecture's module ID
+    let completedLecturesCount = 0
     let currentModuleId = null
 
     const processedModules = course.modules.map((courseModule) => {
-        const moduleProgress = myClassModules.find(
+        const moduleProgress = myClass.modules.find(
             (item) => item.module.toString() === courseModule._id.toString()
         )
+        // Track the completion status of the previous lecture in this module.
+        let isPreviousLectureCompleted = true
 
-        const isModuleCompleted = !!moduleProgress?.isCompleted
-
-        // Process lectures within this module.
         const processedLectures = courseModule.lectures.map((lecture) => {
-            totalLectures++ // Increment total lecture count
+            totalLectures++
 
-            const lectureWatched = moduleProgress?.lectures.find(
+            const isLectureCompleted = moduleProgress?.lectures.some(
                 (watchedLec) =>
                     watchedLec.lecture.toString() === lecture._id.toString()
             )
 
-            // Check if the lecture is completed or is the current lecture being watched.
-            const isLectureCompleted = !!lectureWatched
+            // Check if this is the current lecture being watched.
             const isCurrentLecture =
-                lecture._id.toString() === myClass.currentLecture?.toString()
+                myClass.currentLecture &&
+                lecture._id.toString() === myClass.currentLecture.toString()
 
-            // A lecture is unlocked if it's completed or if it's the current one.
-            const isLectureUnlocked = isLectureCompleted || isCurrentLecture
+            // The lecture is unlocked if it's the current one, has been completed, or the previous one was completed.
+            // This is the core logic for visual unlocking on the frontend.
+            const isLectureUnlocked =
+                isCurrentLecture ||
+                isLectureCompleted ||
+                isPreviousLectureCompleted // For the next iteration, update the flag for the next lecture.
 
-            if (isLectureUnlocked) {
-                unlockedLecturesCount++
-            }
+            // This flag is ONLY set to true if the current lecture is completed.
+            //@ts-ignore
+            isPreviousLectureCompleted = isLectureCompleted
 
-            // Set the current module ID if this is the current lecture
+            // Only count completed lectures for the progress bar.
+            if (isLectureCompleted) {
+                completedLecturesCount++
+            } // Find the current module ID.
+
             if (isCurrentLecture) {
                 currentModuleId = courseModule._id
             }
@@ -373,29 +375,29 @@ const getSingleClassWithProgress = async (classId: string) => {
             return {
                 ...lecture,
                 isCompleted: isLectureCompleted,
-                isLocked: !isLectureUnlocked, // isLocked is the inverse of isLectureUnlocked
+                isLocked: !isLectureUnlocked,
             }
         })
 
         return {
             ...courseModule,
-            isCompleted: isModuleCompleted,
+            isCompleted: !!moduleProgress?.isCompleted,
             lectures: processedLectures,
         }
     })
 
     const overallProgressPercentage =
-        totalLectures > 0 ? (unlockedLecturesCount / totalLectures) * 100 : 0
+        totalLectures > 0 ? (completedLecturesCount / totalLectures) * 100 : 0
     const currentLectureData = await Lecture.findById(myClass.currentLecture)
+
     return {
         currentLecture: currentLectureData,
-        currentModuleId: currentModuleId, // The new field with the current module ID
+        currentModuleId: currentModuleId,
         course: {
             ...course,
             modules: processedModules,
         },
         overallProgress: overallProgressPercentage,
-        unlockedLecturesCount: unlockedLecturesCount,
     }
 }
 const MyClassService = {
