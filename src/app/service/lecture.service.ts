@@ -62,22 +62,20 @@ const deleteLecture = async (req: Request) => {
     }
 }
 
-export const getLecturesWithFilters = async (req: Request, res: Response) => {
+const getLecturesWithFilters = async (req: Request, res: Response) => {
     try {
-        const { courseId, moduleId } = req.query
-        console.log('courseId:', courseId, 'moduleId:', moduleId)
-        // --- Step 1: Always send filters
-        const courses = await Course.find().select('_id title').lean()
-        const modules = await Module.find()
-            .select('_id title courseId lectures')
-            .lean()
-        const lectureTypes = Object.values(LectureContentType)
+        const { courseId, moduleId, searchTerm } = req.query
 
-        // --- Step 2: Determine which module IDs to fetch lectures from
-        let targetModuleIds: mongoose.Types.ObjectId[] = []
+        const lectureQuery: any = {}
 
+        // Step 1: Filter lectures by module or course
         if (moduleId && mongoose.Types.ObjectId.isValid(moduleId.toString())) {
-            targetModuleIds = [new mongoose.Types.ObjectId(moduleId.toString())]
+            const module = await Module.findById(moduleId)
+                .select('lectures')
+                .lean()
+            if (module) {
+                lectureQuery._id = { $in: module.lectures }
+            }
         } else if (
             courseId &&
             mongoose.Types.ObjectId.isValid(courseId.toString())
@@ -85,32 +83,46 @@ export const getLecturesWithFilters = async (req: Request, res: Response) => {
             const course = await Course.findById(courseId)
                 .select('modules')
                 .lean()
-            if (!course)
-                throw new ApiError(httpStatus.BAD_REQUEST, 'Course not found')
-            targetModuleIds = course.modules as mongoose.Types.ObjectId[]
-        } else {
-            targetModuleIds = modules.map((m) => m._id)
+            if (course) {
+                const modulesInCourse = await Module.find({
+                    _id: { $in: course.modules },
+                })
+                    .select('lectures')
+                    .lean()
+                const lectureIds = modulesInCourse.flatMap((m) => m.lectures)
+                lectureQuery._id = { $in: lectureIds }
+            }
         }
 
-        // --- Step 3: Fetch lectures from modules
-        const modulesWithLectures = modules.filter((m) =>
-            targetModuleIds.includes(m._id)
-        )
+        // Step 2: Search term
+        if (
+            searchTerm &&
+            typeof searchTerm === 'string' &&
+            searchTerm.trim() !== ''
+        ) {
+            const searchRegex = new RegExp(searchTerm, 'i')
+            lectureQuery.title = { $regex: searchRegex }
+        }
 
-        const lectureIds = modulesWithLectures.flatMap((m) => m.lectures)
+        // Step 3: Fetch lectures
+        const lectures = await Lecture.find(lectureQuery).lean()
 
-        const lectures = lectureIds.length
-            ? await Lecture.find({ _id: { $in: lectureIds } }).lean()
-            : []
+        // Step 4: Fetch all courses + modules
+        const courses = await Course.find().select('_id title modules').lean()
+        const modules = await Module.find().select('_id title lectures').lean()
 
-        // --- Step 4: Attach module & course info to each lecture
+        // Step 5: Attach module + course info
         const lecturesWithInfo = lectures.map((lec) => {
-            const module = modules.find((m) => m.lectures.includes(lec._id))
-            const course = module
-                ? courses.find(
-                      (c) => c._id.toString() === module.courseId?.toString()
-                  )
-                : null
+            const module = modules.find((m) =>
+                m.lectures?.some((lId) => lId.equals(lec._id))
+            )
+
+            let course: any = null
+            if (module) {
+                course = courses.find((c) =>
+                    c.modules?.some((modId) => modId.equals(module._id))
+                )
+            }
 
             return {
                 ...lec,
@@ -123,20 +135,44 @@ export const getLecturesWithFilters = async (req: Request, res: Response) => {
             }
         })
 
-        // --- Step 5: Return response
+        // Step 6: Modules filter list (scoped by course if provided)
+        let modulesForFilter = modules
+        if (courseId && mongoose.Types.ObjectId.isValid(courseId.toString())) {
+            const course = courses.find(
+                (c) => c._id.toString() === courseId.toString()
+            )
+            if (course) {
+                modulesForFilter = modules.filter((m) =>
+                    course.modules?.some((modId) => modId.equals(m._id))
+                )
+            }
+        }
+
+        // Step 7: Response
+        const lectureTypes = Object.values(LectureContentType)
+
         const responseData = {
-            filters: { courses, modules, lectureTypes },
+            filters: {
+                courses: courses.map((c) => ({ _id: c._id, title: c.title })),
+                modules: modulesForFilter.map((m) => ({
+                    _id: m._id,
+                    title: m.title,
+                })),
+                lectureTypes,
+            },
             data: lecturesWithInfo,
         }
+
         return responseData
     } catch (error: any) {
-        console.error(error)
-        // return res.status(400).json({
-        //     success: false,
-        //     message: 'Failed to fetch lectures',
-        //     errorMessages: [{ path: '', message: error.message }],
-        // })
+        console.error('Error fetching lectures:', error)
+        res.status(httpStatus.BAD_REQUEST).json({
+            success: false,
+            message: 'Failed to fetch lectures',
+            errorMessages: [{ path: '', message: error.message }],
+        })
     }
 }
+
 const LectureService = { updateLecture, deleteLecture, getLecturesWithFilters }
 export default LectureService
