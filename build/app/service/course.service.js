@@ -97,29 +97,38 @@ const getCourseBySlugAndId = (identifier) => __awaiter(void 0, void 0, void 0, f
     });
 });
 const updateCourse = (req) => __awaiter(void 0, void 0, void 0, function* () {
-    const identifier = req.params.slugOrId;
-    const payload = req.body;
-    const { coverPhoto, thumbnail } = (req === null || req === void 0 ? void 0 : req.uploadedFiles) || {};
-    const course = yield course_model_1.default.findOne({
-        $or: [{ id: identifier }, { slug: identifier }],
-    });
-    if (!course) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'course not found');
+    try {
+        const identifier = req.params.slugOrId;
+        const payload = req.body;
+        // user can not update module by this api
+        delete payload.modules;
+        const { coverPhoto, thumbnail } = (req === null || req === void 0 ? void 0 : req.uploadedFiles) || {};
+        const course = yield course_model_1.default.findOne({
+            $or: [{ id: identifier }, { slug: identifier }],
+        });
+        if (!course) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'course not found');
+        }
+        delete payload.id;
+        delete payload.slug;
+        if (coverPhoto) {
+            payload.coverPhoto = (coverPhoto === null || coverPhoto === void 0 ? void 0 : coverPhoto.url) || course.coverPhoto;
+        }
+        if (thumbnail) {
+            payload.thumbnail = (thumbnail === null || thumbnail === void 0 ? void 0 : thumbnail.url) || course.thumbnail;
+        }
+        console.log('payload', payload);
+        yield course_model_1.default.findOneAndUpdate({
+            $or: [{ id: identifier }, { slug: identifier }],
+        }, payload, {
+            new: true,
+        });
+        return { message: 'updated' };
     }
-    delete payload.id;
-    delete payload.slug;
-    if (coverPhoto) {
-        payload.coverPhoto = (coverPhoto === null || coverPhoto === void 0 ? void 0 : coverPhoto.url) || course.coverPhoto;
+    catch (error) {
+        console.log('error', error);
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, (0, getErrorMessage_1.getErrorMessage)(error));
     }
-    if (thumbnail) {
-        payload.thumbnail = (thumbnail === null || thumbnail === void 0 ? void 0 : thumbnail.url) || course.thumbnail;
-    }
-    yield course_model_1.default.findOneAndUpdate({
-        $or: [{ id: identifier }, { slug: identifier }],
-    }, payload, {
-        new: true,
-    });
-    return { message: 'updated' };
 });
 const getModuleOfCourse = (identifier) => __awaiter(void 0, void 0, void 0, function* () {
     const course = yield course_model_1.default.findOne({

@@ -61,7 +61,7 @@ const placeOrder = (req) => __awaiter(void 0, void 0, void 0, function* () {
         const store_id = config_1.default.ssl_store_id;
         const store_passwd = config_1.default.ssl_store_pass;
         const is_live = config_1.default.is_payment_live === 'true' ? true : false;
-        const baseUrl = `${req.protocol}://${req.get('host')}/api/v1/payments`;
+        const baseUrl = `${config_1.default.backend_url}/api/v1/payments`;
         // const tranId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
         const data = {
             total_amount: course.price,

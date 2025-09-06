@@ -47,19 +47,5 @@ ModuleSchema.pre('validate', function (next) {
         next();
     });
 });
-ModuleSchema.pre('save', function (next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (this.isNew) {
-            const ModuleModel = this.constructor;
-            const lastModule = yield ModuleModel.findOne({
-                courseId: this.courseId,
-            })
-                .sort({ moduleNumber: -1 })
-                .lean();
-            this.moduleNumber = lastModule ? lastModule.moduleNumber + 1 : 1;
-        }
-        next();
-    });
-});
 const Module = (0, mongoose_1.model)('module', ModuleSchema);
 exports.default = Module;

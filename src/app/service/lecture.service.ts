@@ -1,4 +1,4 @@
-import { query, Request } from 'express'
+import { query, Request, Response } from 'express'
 import ApiError from '../helpers/ApiError'
 import { ILecture } from '../interface/lecture.interface'
 import Lecture from '../model/lecture.model'

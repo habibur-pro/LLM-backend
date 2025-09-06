@@ -25,7 +25,27 @@ const updateLecture = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0
         data: result,
     });
 }));
+const deleteLecture = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield lecture_service_1.default.deleteLecture(req);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'lecture deleted successfully',
+        data: result,
+    });
+}));
+const getLecturesWithFilters = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield lecture_service_1.default.getLecturesWithFilters(req, res);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'lecture data fetched successfully',
+        data: result,
+    });
+}));
 const LectureController = {
     updateLecture,
+    deleteLecture,
+    getLecturesWithFilters,
 };
 exports.default = LectureController;

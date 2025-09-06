@@ -20,19 +20,42 @@ const config_1 = __importDefault(require("../config"));
 const user_model_1 = __importDefault(require("../model/user.model"));
 const ApiError_1 = __importDefault(require("../helpers/ApiError"));
 const getErrorMessage_1 = require("../helpers/getErrorMessage");
+const refreshToken_model_1 = __importDefault(require("../model/refreshToken.model"));
 const refreshTokensDB = [];
 function generateAccessToken(user) {
     return jsonwebtoken_1.default.sign(user, config_1.default.access_token_secret, {
         expiresIn: config_1.default.access_token_expires_in,
     });
 }
-function generateRefreshToken(user) {
-    const token = jsonwebtoken_1.default.sign(user, config_1.default.refresh_token_secret, {
+const setRefreshToken = (res, token) => __awaiter(void 0, void 0, void 0, function* () {
+    const refreshTokenExpiryMs = (0, ms_1.default)(config_1.default.refresh_token_expires_in);
+    res.cookie('refreshToken', token, {
+        httpOnly: true, // prevents JS access
+        secure: false, //it will true for production
+        sameSite: 'strict',
+        maxAge: Number(refreshTokenExpiryMs), // cookie expiration in ms
+        path: '/',
+    });
+});
+const generateRefreshToken = (user) => __awaiter(void 0, void 0, void 0, function* () {
+    const expiresInMs = (0, ms_1.default)(config_1.default.refresh_token_expires_in);
+    // calculate expiresAt date
+    const expiresAt = new Date(Date.now() + expiresInMs);
+    if (!expiresInMs)
+        throw new Error('Invalid refresh token expiry');
+    const newToken = jsonwebtoken_1.default.sign({ id: user.id }, config_1.default.refresh_token_secret, {
         expiresIn: config_1.default.refresh_token_expires_in,
     });
-    refreshTokensDB.push(token);
-    return token;
-}
+    // delete if token exist
+    yield refreshToken_model_1.default.deleteMany({ userId: user.id });
+    // create new refresh token
+    yield refreshToken_model_1.default.create({
+        userId: user.id,
+        token: newToken,
+        expiresAt,
+    });
+    return newToken;
+});
 const signup = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const isExist = yield user_model_1.default.findOne({
@@ -53,8 +76,9 @@ const signup = (payload) => __awaiter(void 0, void 0, void 0, function* () {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, (0, getErrorMessage_1.getErrorMessage)(error) || 'something went wrong');
     }
 });
-const signin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+const signin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const payload = req.body;
         if (!(payload === null || payload === void 0 ? void 0 : payload.email) || !(payload === null || payload === void 0 ? void 0 : payload.password)) {
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'email, password is required');
         }
@@ -71,17 +95,15 @@ const signin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
             email: user.email,
             role: user.role,
         });
-        const refreshToken = generateRefreshToken({
-            id: user.id,
-        });
+        const refreshToken = yield generateRefreshToken(user);
+        // set refresh token to cookie
+        yield setRefreshToken(res, refreshToken);
         // calculate expiry timestamps
         const accessTokenExpiresInMs = (0, ms_1.default)(config_1.default.access_token_expires_in || '15m');
-        const refreshTokenExpiresInMs = (0, ms_1.default)(config_1.default.refresh_token_expires_in || '7d');
         const responseData = {
             id: user.id,
             name: user.name,
             accessToken,
-            refreshToken,
             email: user.email,
             role: user.role,
             accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
@@ -108,12 +130,19 @@ const verifySignin = (payload) => __awaiter(void 0, void 0, void 0, function* ()
     }
     return { role: user.role };
 });
-const refreshToken = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const { refreshToken } = payload;
-    if (!refreshToken || !refreshTokensDB.includes(refreshToken)) {
-        throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, 'Unauthorized access');
-    }
+const refreshToken = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const { refreshToken } = req.cookies;
+        console.log({ refreshToken });
+        // check refresh token into cookie
+        if (!refreshToken) {
+            throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, 'Unauthorized access');
+        }
+        // check into db
+        const savedToken = yield refreshToken_model_1.default.findOne({ token: refreshToken });
+        if (!savedToken) {
+            throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, 'Unauthorized access');
+        }
         // Verify refresh token and extract user payload
         const token = jsonwebtoken_1.default.verify(refreshToken, config_1.default.refresh_token_secret);
         const user = yield user_model_1.default.findOne({ id: token.id });
@@ -127,14 +156,13 @@ const refreshToken = (payload) => __awaiter(void 0, void 0, void 0, function* ()
             role: user.role,
         });
         // Generate new refresh token
-        const newRefreshToken = generateRefreshToken({
-            id: user.id,
-        });
+        const newRefreshToken = yield generateRefreshToken(user);
+        // set refresh token to cookie
+        yield setRefreshToken(res, newRefreshToken);
         // calculate expiry timestamps
         const accessTokenExpiresInMs = (0, ms_1.default)(config_1.default.access_token_expires_in || '15m');
         return {
             accessToken,
-            refreshToken: newRefreshToken,
             accessTokenExpiresAt: Date.now() + accessTokenExpiresInMs,
         };
     }
