@@ -26,8 +26,11 @@ const getMyClasses = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const nextLecture = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const classId = req.params.classId;
-    const data = yield myClass_service_1.default.nextLecture(classId);
+    const providedLectureId = (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.lecture;
+    console.log('provided', providedLectureId);
+    const data = yield myClass_service_1.default.nextLecture(classId, providedLectureId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -55,10 +58,23 @@ const singleClassProgress = (0, asyncHandler_1.default)((req, res) => __awaiter(
         data: data,
     });
 }));
+const setCurrentLecture = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const classId = req.params.classId;
+    const providedLectureId = (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.lecture;
+    const data = yield myClass_service_1.default.setCurrentLecture(classId, providedLectureId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'current lecture updated successfully',
+        data: data,
+    });
+}));
 const MyClassController = {
     getMyClasses,
     nextLecture,
     previousLecture,
     singleClassProgress,
+    setCurrentLecture,
 };
 exports.default = MyClassController;

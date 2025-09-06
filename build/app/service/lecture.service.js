@@ -12,7 +12,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getLecturesWithFilters = void 0;
 const ApiError_1 = __importDefault(require("../helpers/ApiError"));
 const lecture_model_1 = __importDefault(require("../model/lecture.model"));
 const http_status_1 = __importDefault(require("http-status"));
@@ -68,65 +67,88 @@ const deleteLecture = (req) => __awaiter(void 0, void 0, void 0, function* () {
 });
 const getLecturesWithFilters = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { courseId, moduleId } = req.query;
-        console.log('courseId:', courseId, 'moduleId:', moduleId);
-        // --- Step 1: Always send filters
-        const courses = yield course_model_1.default.find().select('_id title').lean();
-        const modules = yield module_model_1.default.find()
-            .select('_id title courseId lectures')
-            .lean();
-        const lectureTypes = Object.values(enum_1.LectureContentType);
-        // --- Step 2: Determine which module IDs to fetch lectures from
-        let targetModuleIds = [];
+        const { courseId, moduleId, searchTerm } = req.query;
+        const lectureQuery = {};
+        // Step 1: Filter lectures by module or course
         if (moduleId && mongoose_1.default.Types.ObjectId.isValid(moduleId.toString())) {
-            targetModuleIds = [new mongoose_1.default.Types.ObjectId(moduleId.toString())];
+            const module = yield module_model_1.default.findById(moduleId)
+                .select('lectures')
+                .lean();
+            if (module) {
+                lectureQuery._id = { $in: module.lectures };
+            }
         }
         else if (courseId &&
             mongoose_1.default.Types.ObjectId.isValid(courseId.toString())) {
             const course = yield course_model_1.default.findById(courseId)
                 .select('modules')
                 .lean();
-            if (!course)
-                throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Course not found');
-            targetModuleIds = course.modules;
+            if (course) {
+                const modulesInCourse = yield module_model_1.default.find({
+                    _id: { $in: course.modules },
+                })
+                    .select('lectures')
+                    .lean();
+                const lectureIds = modulesInCourse.flatMap((m) => m.lectures);
+                lectureQuery._id = { $in: lectureIds };
+            }
         }
-        else {
-            targetModuleIds = modules.map((m) => m._id);
+        // Step 2: Search term
+        if (searchTerm &&
+            typeof searchTerm === 'string' &&
+            searchTerm.trim() !== '') {
+            const searchRegex = new RegExp(searchTerm, 'i');
+            lectureQuery.title = { $regex: searchRegex };
         }
-        // --- Step 3: Fetch lectures from modules
-        const modulesWithLectures = modules.filter((m) => targetModuleIds.includes(m._id));
-        const lectureIds = modulesWithLectures.flatMap((m) => m.lectures);
-        const lectures = lectureIds.length
-            ? yield lecture_model_1.default.find({ _id: { $in: lectureIds } }).lean()
-            : [];
-        // --- Step 4: Attach module & course info to each lecture
+        // Step 3: Fetch lectures
+        const lectures = yield lecture_model_1.default.find(lectureQuery).lean();
+        // Step 4: Fetch all courses + modules
+        const courses = yield course_model_1.default.find().select('_id title modules').lean();
+        const modules = yield module_model_1.default.find().select('_id title lectures').lean();
+        // Step 5: Attach module + course info
         const lecturesWithInfo = lectures.map((lec) => {
-            const module = modules.find((m) => m.lectures.includes(lec._id));
-            const course = module
-                ? courses.find((c) => { var _a; return c._id.toString() === ((_a = module.courseId) === null || _a === void 0 ? void 0 : _a.toString()); })
-                : null;
+            const module = modules.find((m) => { var _a; return (_a = m.lectures) === null || _a === void 0 ? void 0 : _a.some((lId) => lId.equals(lec._id)); });
+            let course = null;
+            if (module) {
+                course = courses.find((c) => { var _a; return (_a = c.modules) === null || _a === void 0 ? void 0 : _a.some((modId) => modId.equals(module._id)); });
+            }
             return Object.assign(Object.assign({}, lec), { module: module
                     ? { _id: module._id, title: module.title }
                     : null, course: course
                     ? { _id: course._id, title: course.title }
                     : null });
         });
-        // --- Step 5: Return response
+        // Step 6: Modules filter list (scoped by course if provided)
+        let modulesForFilter = modules;
+        if (courseId && mongoose_1.default.Types.ObjectId.isValid(courseId.toString())) {
+            const course = courses.find((c) => c._id.toString() === courseId.toString());
+            if (course) {
+                modulesForFilter = modules.filter((m) => { var _a; return (_a = course.modules) === null || _a === void 0 ? void 0 : _a.some((modId) => modId.equals(m._id)); });
+            }
+        }
+        // Step 7: Response
+        const lectureTypes = Object.values(enum_1.LectureContentType);
         const responseData = {
-            filters: { courses, modules, lectureTypes },
+            filters: {
+                courses: courses.map((c) => ({ _id: c._id, title: c.title })),
+                modules: modulesForFilter.map((m) => ({
+                    _id: m._id,
+                    title: m.title,
+                })),
+                lectureTypes,
+            },
             data: lecturesWithInfo,
         };
         return responseData;
     }
     catch (error) {
-        console.error(error);
-        // return res.status(400).json({
-        //     success: false,
-        //     message: 'Failed to fetch lectures',
-        //     errorMessages: [{ path: '', message: error.message }],
-        // })
+        console.error('Error fetching lectures:', error);
+        res.status(http_status_1.default.BAD_REQUEST).json({
+            success: false,
+            message: 'Failed to fetch lectures',
+            errorMessages: [{ path: '', message: error.message }],
+        });
     }
 });
-exports.getLecturesWithFilters = getLecturesWithFilters;
-const LectureService = { updateLecture, deleteLecture, getLecturesWithFilters: exports.getLecturesWithFilters };
+const LectureService = { updateLecture, deleteLecture, getLecturesWithFilters };
 exports.default = LectureService;
