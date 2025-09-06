@@ -37,7 +37,7 @@ const routes = [
     {
         path: '/lectures',
         route: lecture_router_1.default,
-        middleware: [(0, authorize_1.authorize)(enum_1.UserRole.Admin)],
+        // middleware: [authorize(UserRole.Admin)],
     },
     {
         path: '/watch-history',

@@ -45,6 +45,7 @@ const successPayment = async (req: Request, res: Response) => {
         const firstModule = await Module.findById(updatedCourse?.modules[0])
 
         // create my classes for getting course progress and watch lecture
+
         await MyClass.create({
             user: updatedOrder?.user,
             course: updatedOrder?.course,

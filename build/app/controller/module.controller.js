@@ -36,8 +36,18 @@ const addLecture = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, v
         data: result,
     });
 }));
+const deleteModule = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield module_service_1.default.deleteModule(req);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'module deleted successfully',
+        data: result,
+    });
+}));
 const ModuleController = {
     updateModule,
     addLecture,
+    deleteModule,
 };
 exports.default = ModuleController;

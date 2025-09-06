@@ -38,6 +38,10 @@ const LectureSchema = new mongoose_1.Schema({
         enum: Object.values(enum_1.LectureContentType),
         required: [true, 'content type is required'],
     },
+    notes: {
+        type: [String],
+        default: null,
+    },
     lectureNumber: {
         type: Number,
         default: 0,
@@ -47,20 +51,6 @@ LectureSchema.pre('validate', function (next) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!this.id) {
             this.id = yield (0, idGenerator_1.default)(this.constructor);
-        }
-        next();
-    });
-});
-LectureSchema.pre('save', function (next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (this.isNew) {
-            const LectureModel = this.constructor;
-            const lastLecture = yield LectureModel.findOne({
-                moduleId: this.moduleId,
-            })
-                .sort({ lectureNumber: -1 })
-                .lean();
-            this.lectureNumber = lastLecture ? lastLecture.lectureNumber + 1 : 1;
         }
         next();
     });

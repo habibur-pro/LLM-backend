@@ -27,6 +27,10 @@ const LectureSchema = new Schema<ILecture>(
             enum: Object.values(LectureContentType),
             required: [true, 'content type is required'],
         },
+        notes: {
+            type: [String],
+            default: null,
+        },
         lectureNumber: {
             type: Number,
             default: 0,
@@ -40,22 +44,6 @@ LectureSchema.pre<ILecture>('validate', async function (next) {
         this.id = await idGenerator(
             this.constructor as Model<Document & ILecture>
         )
-    }
-    next()
-})
-
-type LectureDoc = HydratedDocument<ILecture>
-
-LectureSchema.pre<LectureDoc>('save', async function (next) {
-    if (this.isNew) {
-        const LectureModel = this.constructor as Model<ILecture>
-        const lastLecture = await LectureModel.findOne({
-            moduleId: this.moduleId,
-        })
-            .sort({ lectureNumber: -1 })
-            .lean()
-
-        this.lectureNumber = lastLecture ? lastLecture.lectureNumber + 1 : 1
     }
     next()
 })

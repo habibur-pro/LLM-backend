@@ -26,7 +26,7 @@ const signup = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 
     });
 }));
 const signIn = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const data = yield auth_service_1.default.signin(req.body);
+    const data = yield auth_service_1.default.signin(req, res);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -44,7 +44,7 @@ const verifySignin = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const refreshToken = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const data = yield auth_service_1.default.refreshToken(req.body);
+    const data = yield auth_service_1.default.refreshToken(req, res);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
