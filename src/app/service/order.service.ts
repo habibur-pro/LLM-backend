@@ -12,6 +12,7 @@ import Order from '../model/order.model'
 import config from '../config'
 import { getErrorMessage } from '../helpers/getErrorMessage'
 import Payment from '../model/payment.model'
+import MyClass from '../model/myClass.model'
 const placeOrder = async (req: Request) => {
     const payload: { userId: string; courseId: string } = req.body
     console.log('payload', payload)
@@ -29,6 +30,19 @@ const placeOrder = async (req: Request) => {
         if (!course) {
             throw new ApiError(httpStatus.BAD_REQUEST, 'course not found')
         }
+        // check is student already enroled or not
+        const myClass = await MyClass.findOne({
+            course: course._id,
+            user: user._id,
+        })
+
+        if (myClass) {
+            throw new ApiError(
+                httpStatus.BAD_REQUEST,
+                'You already enrolled this course'
+            )
+        }
+
         if (course.availableSeat < 1) {
             throw new ApiError(
                 httpStatus.BAD_REQUEST,

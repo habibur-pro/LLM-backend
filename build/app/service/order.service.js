@@ -24,6 +24,7 @@ const order_model_1 = __importDefault(require("../model/order.model"));
 const config_1 = __importDefault(require("../config"));
 const getErrorMessage_1 = require("../helpers/getErrorMessage");
 const payment_model_1 = __importDefault(require("../model/payment.model"));
+const myClass_model_1 = __importDefault(require("../model/myClass.model"));
 const placeOrder = (req) => __awaiter(void 0, void 0, void 0, function* () {
     const payload = req.body;
     console.log('payload', payload);
@@ -37,6 +38,14 @@ const placeOrder = (req) => __awaiter(void 0, void 0, void 0, function* () {
         const course = yield course_model_1.default.findOne({ id: payload.courseId }).session(session);
         if (!course) {
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'course not found');
+        }
+        // check is student already enroled or not
+        const myClass = yield myClass_model_1.default.findOne({
+            course: course._id,
+            user: user._id,
+        });
+        if (myClass) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'You already enrolled this course');
         }
         if (course.availableSeat < 1) {
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'there are not seat available');

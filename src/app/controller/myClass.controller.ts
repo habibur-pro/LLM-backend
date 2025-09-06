@@ -15,7 +15,9 @@ const getMyClasses = catchAsync(async (req, res) => {
 })
 const nextLecture = catchAsync(async (req, res) => {
     const classId = req.params.classId
-    const data = await MyClassService.nextLecture(classId)
+    const providedLectureId = req?.body?.lecture
+    console.log('provided', providedLectureId)
+    const data = await MyClassService.nextLecture(classId, providedLectureId)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
@@ -43,11 +45,26 @@ const singleClassProgress = catchAsync(async (req, res) => {
         data: data,
     })
 })
+const setCurrentLecture = catchAsync(async (req, res) => {
+    const classId = req.params.classId
+    const providedLectureId = req?.body?.lecture
+    const data = await MyClassService.setCurrentLecture(
+        classId,
+        providedLectureId
+    )
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'current lecture updated successfully',
+        data: data,
+    })
+})
 
 const MyClassController = {
     getMyClasses,
     nextLecture,
     previousLecture,
     singleClassProgress,
+    setCurrentLecture,
 }
 export default MyClassController
