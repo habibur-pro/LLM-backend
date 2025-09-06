@@ -9,5 +9,6 @@ router.patch(
     LectureController.updateLecture
 )
 router.delete('/:lectureId', LectureController.deleteLecture)
+router.get('/', LectureController.getLecturesWithFilters)
 const LectureRouter = router
 export default LectureRouter

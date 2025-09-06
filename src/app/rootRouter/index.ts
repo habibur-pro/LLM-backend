@@ -37,7 +37,7 @@ const routes: AppRoute[] = [
     {
         path: '/lectures',
         route: LectureRouter,
-        middleware: [authorize(UserRole.Admin)],
+        // middleware: [authorize(UserRole.Admin)],
     },
     {
         path: '/watch-history',
