@@ -13,7 +13,7 @@ const signup = catchAsync(async (req, res) => {
     })
 })
 const signIn = catchAsync(async (req, res) => {
-    const data = await AuthService.signin(req.body)
+    const data = await AuthService.signin(req, res)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
@@ -33,7 +33,7 @@ const verifySignin = catchAsync(async (req, res) => {
 })
 
 const refreshToken = catchAsync(async (req, res) => {
-    const data = await AuthService.refreshToken(req.body)
+    const data = await AuthService.refreshToken(req, res)
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,

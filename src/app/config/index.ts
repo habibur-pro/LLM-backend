@@ -22,6 +22,7 @@ const config = {
     is_payment_live: process.env.IS_PAYMENT_LIVE,
     frontend_url: process.env.FRONTEND_URL,
     backend_url: process.env.BACKEND_URL,
+    cors_domain: process.env.FRONTEND_URL,
 }
 
 export default config

@@ -48,21 +48,5 @@ ModuleSchema.pre<IModule>('validate', async function (next) {
     next()
 })
 
-// Auto-increment moduleNumber based on courseId
-type ModuleDoc = HydratedDocument<IModule>
-ModuleSchema.pre<ModuleDoc>('save', async function (next) {
-    if (this.isNew) {
-        const ModuleModel = this.constructor as Model<IModule>
-        const lastModule = await ModuleModel.findOne({
-            courseId: this.courseId,
-        })
-            .sort({ moduleNumber: -1 })
-            .lean()
-
-        this.moduleNumber = lastModule ? lastModule.moduleNumber + 1 : 1
-    }
-    next()
-})
-
 const Module = model<IModule>('module', ModuleSchema)
 export default Module
